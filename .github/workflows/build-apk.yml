@@ -11,6 +11,9 @@ jobs:
     timeout-minutes: 45
     env:
       TAR_OPTIONS: --no-same-owner
+      # Release-signing secret, surfaced as env so a step `if:` can test it
+      # (the `secrets` context is not allowed inside `if:` expressions).
+      LURNIQ_KEYSTORE_B64: ${{ secrets.LURNIQ_KEYSTORE_BASE64 }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,9 +44,9 @@ jobs:
       # (see PLAY_RELEASE_CHECKLIST.md). Without them the AAB below is
       # debug-signed — a performance/size reference only, NOT for upload.
       - name: Prepare upload keystore (release signing)
-        if: ${{ secrets.LURNIQ_KEYSTORE_BASE64 != '' }}
+        if: ${{ env.LURNIQ_KEYSTORE_B64 != '' }}
         run: |
-          echo "${{ secrets.LURNIQ_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload.keystore
+          echo "$LURNIQ_KEYSTORE_B64" | base64 -d > android/app/upload.keystore
           {
             echo "LURNIQ_KEYSTORE_PATH=$GITHUB_WORKSPACE/android/app/upload.keystore"
             echo "LURNIQ_STORE_PASSWORD=${{ secrets.LURNIQ_STORE_PASSWORD }}"
