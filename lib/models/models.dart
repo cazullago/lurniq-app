@@ -44,6 +44,7 @@ class AppUser {
     List<String>? blockedIds,
     DateTime? createdAt,
     this.demoSeed = false,
+    this.themeMode = 'system',
   })  : interests = interests ?? [],
         learningGoals = learningGoals ?? [],
         fieldPrivacy = fieldPrivacy ?? {},
@@ -77,6 +78,8 @@ class AppUser {
   List<String> blockedIds;
   DateTime createdAt;
   bool demoSeed;
+  /// 'system' | 'light' | 'dark' — manual day/night override.
+  String themeMode;
 
   /// Privacy for a profile field; defaults to public.
   String privacyFor(String field) => fieldPrivacy[field] ?? 'public';
@@ -108,6 +111,7 @@ class AppUser {
         'blockedIds': blockedIds,
         'createdAt': createdAt.toIso8601String(),
         'demoSeed': demoSeed,
+        'themeMode': themeMode,
       };
 
   factory AppUser.fromJson(Map<String, dynamic> j) => AppUser(
@@ -137,6 +141,7 @@ class AppUser {
         blockedIds: _strList(j['blockedIds']),
         createdAt: _dt(j['createdAt'], DateTime.now()),
         demoSeed: (j['demoSeed'] ?? false) as bool,
+        themeMode: (j['themeMode'] ?? 'system') as String,
       );
 }
 
@@ -622,6 +627,11 @@ class StudyTask {
     this.reminder = false,
     DateTime? createdAt,
     this.completedAt,
+    this.taskType = 'assignment',
+    this.taskTypeCustom = '',
+    this.gradeScore = '',
+    this.gradeNote = '',
+    this.gradePhotoPath,
   }) : createdAt = createdAt ?? DateTime.now();
 
   String id;
@@ -637,8 +647,19 @@ class StudyTask {
   bool reminder; // push delivery arrives in Phase 2; the time is saved now
   DateTime createdAt;
   DateTime? completedAt;
+  /// assignment|activity|project|quiz|exam|thesis|performance|other
+  String taskType;
+  /// free text when taskType == 'other'
+  String taskTypeCustom;
+  /// grade logged on a done task: typed score (e.g. "95/100")
+  String gradeScore;
+  String gradeNote;
+  String? gradePhotoPath;
 
   bool get isDone => status == 'done';
+
+  String get typeLabel =>
+      taskType == 'other' && taskTypeCustom.isNotEmpty ? taskTypeCustom : taskType;
 
   bool get isOverdue {
     if (isDone || dueAtLocal == null) return false;
@@ -659,6 +680,11 @@ class StudyTask {
         'reminder': reminder,
         'createdAt': createdAt.toIso8601String(),
         'completedAt': completedAt?.toIso8601String(),
+        'taskType': taskType,
+        'taskTypeCustom': taskTypeCustom,
+        'gradeScore': gradeScore,
+        'gradeNote': gradeNote,
+        'gradePhotoPath': gradePhotoPath,
       };
 
   factory StudyTask.fromJson(Map<String, dynamic> j) => StudyTask(
@@ -679,6 +705,11 @@ class StudyTask {
         completedAt: j['completedAt'] is String
             ? DateTime.tryParse(j['completedAt'] as String)
             : null,
+        taskType: (j['taskType'] ?? 'assignment') as String,
+        taskTypeCustom: (j['taskTypeCustom'] ?? '') as String,
+        gradeScore: (j['gradeScore'] ?? '') as String,
+        gradeNote: (j['gradeNote'] ?? '') as String,
+        gradePhotoPath: j['gradePhotoPath'] as String?,
       );
 }
 
@@ -785,5 +816,448 @@ class Announcement {
         body: (j['body'] ?? '') as String,
         createdAt: _dt(j['createdAt'], DateTime.now()),
         active: (j['active'] ?? true) as bool,
+      );
+}
+
+// ── v2: Courses (pre-made tutor lessons) ──────────────────
+
+class Course {
+  Course({
+    required this.id,
+    required this.tutorId,
+    this.tutorName = '',
+    this.title = '',
+    this.description = '',
+    this.subject = '',
+    this.level = '',
+    this.thumbnailPath,
+    this.priceUsd = 0,
+    this.published = true,
+    this.rating = 0,
+    this.reviewCount = 0,
+    this.enrollmentCount = 0,
+    DateTime? createdAt,
+    this.isDemo = false,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  String id;
+  String tutorId;
+  String tutorName;
+  String title;
+  String description;
+  String subject;
+  String level;
+  String? thumbnailPath;
+  double priceUsd; // 0 = free
+  bool published;
+  double rating;
+  int reviewCount;
+  int enrollmentCount;
+  DateTime createdAt;
+  bool isDemo;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'tutorId': tutorId,
+        'tutorName': tutorName,
+        'title': title,
+        'description': description,
+        'subject': subject,
+        'level': level,
+        'thumbnailPath': thumbnailPath,
+        'priceUsd': priceUsd,
+        'published': published,
+        'rating': rating,
+        'reviewCount': reviewCount,
+        'enrollmentCount': enrollmentCount,
+        'createdAt': createdAt.toIso8601String(),
+        'isDemo': isDemo,
+      };
+
+  factory Course.fromJson(Map<String, dynamic> j) => Course(
+        id: j['id'] as String,
+        tutorId: (j['tutorId'] ?? '') as String,
+        tutorName: (j['tutorName'] ?? '') as String,
+        title: (j['title'] ?? '') as String,
+        description: (j['description'] ?? '') as String,
+        subject: (j['subject'] ?? '') as String,
+        level: (j['level'] ?? '') as String,
+        thumbnailPath: j['thumbnailPath'] as String?,
+        priceUsd: ((j['priceUsd'] ?? 0) as num).toDouble(),
+        published: (j['published'] ?? true) as bool,
+        rating: ((j['rating'] ?? 0) as num).toDouble(),
+        reviewCount: (j['reviewCount'] ?? 0) as int,
+        enrollmentCount: (j['enrollmentCount'] ?? 0) as int,
+        createdAt: _dt(j['createdAt'], DateTime.now()),
+        isDemo: (j['isDemo'] ?? false) as bool,
+      );
+}
+
+class CourseLesson {
+  CourseLesson({
+    required this.id,
+    required this.courseId,
+    this.title = '',
+    this.kind = 'text', // video | slides | text
+    this.videoUrl = '',
+    this.body = '',
+    this.durationMin = 0,
+    this.order = 0,
+  });
+
+  String id;
+  String courseId;
+  String title;
+  String kind;
+  String videoUrl;
+  String body;
+  int durationMin;
+  int order;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'courseId': courseId,
+        'title': title,
+        'kind': kind,
+        'videoUrl': videoUrl,
+        'body': body,
+        'durationMin': durationMin,
+        'order': order,
+      };
+
+  factory CourseLesson.fromJson(Map<String, dynamic> j) => CourseLesson(
+        id: j['id'] as String,
+        courseId: (j['courseId'] ?? '') as String,
+        title: (j['title'] ?? '') as String,
+        kind: (j['kind'] ?? 'text') as String,
+        videoUrl: (j['videoUrl'] ?? '') as String,
+        body: (j['body'] ?? '') as String,
+        durationMin: (j['durationMin'] ?? 0) as int,
+        order: (j['order'] ?? 0) as int,
+      );
+}
+
+class CourseEnrollment {
+  CourseEnrollment({
+    required this.id,
+    required this.courseId,
+    required this.studentId,
+    List<String>? doneLessonIds,
+    DateTime? enrolledAt,
+  })  : doneLessonIds = doneLessonIds ?? [],
+        enrolledAt = enrolledAt ?? DateTime.now();
+
+  String id;
+  String courseId;
+  String studentId;
+  List<String> doneLessonIds;
+  DateTime enrolledAt;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'courseId': courseId,
+        'studentId': studentId,
+        'doneLessonIds': doneLessonIds,
+        'enrolledAt': enrolledAt.toIso8601String(),
+      };
+
+  factory CourseEnrollment.fromJson(Map<String, dynamic> j) =>
+      CourseEnrollment(
+        id: j['id'] as String,
+        courseId: (j['courseId'] ?? '') as String,
+        studentId: (j['studentId'] ?? '') as String,
+        doneLessonIds: _strList(j['doneLessonIds']),
+        enrolledAt: _dt(j['enrolledAt'], DateTime.now()),
+      );
+}
+
+// ── v2: 1v1 tutoring bookings ────────────────────────────
+
+class TutorBooking {
+  TutorBooking({
+    required this.id,
+    required this.tutorId,
+    this.tutorName = '',
+    required this.studentId,
+    this.studentName = '',
+    this.startsAtUtc,
+    this.durationMin = 60,
+    this.meetingLink = '',
+    this.note = '',
+    this.status = 'pending', // pending|accepted|declined|completed|cancelled
+    this.reviewRating = 0,
+    this.reviewText = '',
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  String id;
+  String tutorId;
+  String tutorName;
+  String studentId;
+  String studentName;
+  DateTime? startsAtUtc;
+  int durationMin;
+  String meetingLink;
+  String note;
+  String status;
+  double reviewRating;
+  String reviewText;
+  DateTime createdAt;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'tutorId': tutorId,
+        'tutorName': tutorName,
+        'studentId': studentId,
+        'studentName': studentName,
+        'startsAtUtc': startsAtUtc?.toIso8601String(),
+        'durationMin': durationMin,
+        'meetingLink': meetingLink,
+        'note': note,
+        'status': status,
+        'reviewRating': reviewRating,
+        'reviewText': reviewText,
+        'createdAt': createdAt.toIso8601String(),
+      };
+
+  factory TutorBooking.fromJson(Map<String, dynamic> j) => TutorBooking(
+        id: j['id'] as String,
+        tutorId: (j['tutorId'] ?? '') as String,
+        tutorName: (j['tutorName'] ?? '') as String,
+        studentId: (j['studentId'] ?? '') as String,
+        studentName: (j['studentName'] ?? '') as String,
+        startsAtUtc: j['startsAtUtc'] is String
+            ? DateTime.tryParse(j['startsAtUtc'] as String)
+            : null,
+        durationMin: (j['durationMin'] ?? 60) as int,
+        meetingLink: (j['meetingLink'] ?? '') as String,
+        note: (j['note'] ?? '') as String,
+        status: (j['status'] ?? 'pending') as String,
+        reviewRating: ((j['reviewRating'] ?? 0) as num).toDouble(),
+        reviewText: (j['reviewText'] ?? '') as String,
+        createdAt: _dt(j['createdAt'], DateTime.now()),
+      );
+}
+
+// ── v2: Live sessions + in-app quizzes ───────────────────
+
+class QuizQuestion {
+  QuizQuestion({
+    required this.id,
+    this.question = '',
+    List<String>? options,
+    this.correctIndex = 0,
+    this.secondsPerQuestion = 30,
+  }) : options = options ?? [];
+
+  String id;
+  String question;
+  List<String> options;
+  int correctIndex;
+  int secondsPerQuestion;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'question': question,
+        'options': options,
+        'correctIndex': correctIndex,
+        'secondsPerQuestion': secondsPerQuestion,
+      };
+
+  factory QuizQuestion.fromJson(Map<String, dynamic> j) => QuizQuestion(
+        id: j['id'] as String,
+        question: (j['question'] ?? '') as String,
+        options: _strList(j['options']),
+        correctIndex: (j['correctIndex'] ?? 0) as int,
+        secondsPerQuestion: (j['secondsPerQuestion'] ?? 30) as int,
+      );
+}
+
+class LiveSession {
+  LiveSession({
+    required this.id,
+    required this.tutorId,
+    this.tutorName = '',
+    this.title = '',
+    this.subject = '',
+    this.description = '',
+    this.startsAtUtc,
+    this.durationMin = 60,
+    this.meetingLink = '',
+    this.status = 'scheduled', // scheduled|live|ended
+    List<QuizQuestion>? quiz,
+    DateTime? createdAt,
+    this.isDemo = false,
+  })  : quiz = quiz ?? [],
+        createdAt = createdAt ?? DateTime.now();
+
+  String id;
+  String tutorId;
+  String tutorName;
+  String title;
+  String subject;
+  String description;
+  DateTime? startsAtUtc;
+  int durationMin;
+  String meetingLink;
+  String status;
+  List<QuizQuestion> quiz;
+  DateTime createdAt;
+  bool isDemo;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'tutorId': tutorId,
+        'tutorName': tutorName,
+        'title': title,
+        'subject': subject,
+        'description': description,
+        'startsAtUtc': startsAtUtc?.toIso8601String(),
+        'durationMin': durationMin,
+        'meetingLink': meetingLink,
+        'status': status,
+        'quiz': quiz.map((e) => e.toJson()).toList(),
+        'createdAt': createdAt.toIso8601String(),
+        'isDemo': isDemo,
+      };
+
+  factory LiveSession.fromJson(Map<String, dynamic> j) => LiveSession(
+        id: j['id'] as String,
+        tutorId: (j['tutorId'] ?? '') as String,
+        tutorName: (j['tutorName'] ?? '') as String,
+        title: (j['title'] ?? '') as String,
+        subject: (j['subject'] ?? '') as String,
+        description: (j['description'] ?? '') as String,
+        startsAtUtc: j['startsAtUtc'] is String
+            ? DateTime.tryParse(j['startsAtUtc'] as String)
+            : null,
+        durationMin: (j['durationMin'] ?? 60) as int,
+        meetingLink: (j['meetingLink'] ?? '') as String,
+        status: (j['status'] ?? 'scheduled') as String,
+        quiz: ((j['quiz'] as List?) ?? [])
+            .whereType<Map<String, dynamic>>()
+            .map(QuizQuestion.fromJson)
+            .toList(),
+        createdAt: _dt(j['createdAt'], DateTime.now()),
+        isDemo: (j['isDemo'] ?? false) as bool,
+      );
+}
+
+class QuizAttempt {
+  QuizAttempt({
+    required this.id,
+    required this.sessionId,
+    required this.userId,
+    this.userName = '',
+    this.score = 0,
+    this.total = 0,
+    DateTime? answeredAt,
+    this.isDemo = false,
+  }) : answeredAt = answeredAt ?? DateTime.now();
+
+  String id;
+  String sessionId;
+  String userId;
+  String userName;
+  int score;
+  int total;
+  DateTime answeredAt;
+  bool isDemo;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'sessionId': sessionId,
+        'userId': userId,
+        'userName': userName,
+        'score': score,
+        'total': total,
+        'answeredAt': answeredAt.toIso8601String(),
+        'isDemo': isDemo,
+      };
+
+  factory QuizAttempt.fromJson(Map<String, dynamic> j) => QuizAttempt(
+        id: j['id'] as String,
+        sessionId: (j['sessionId'] ?? '') as String,
+        userId: (j['userId'] ?? '') as String,
+        userName: (j['userName'] ?? '') as String,
+        score: (j['score'] ?? 0) as int,
+        total: (j['total'] ?? 0) as int,
+        answeredAt: _dt(j['answeredAt'], DateTime.now()),
+        isDemo: (j['isDemo'] ?? false) as bool,
+      );
+}
+
+// ── v2: Messaging (demo-mode, on-device) ─────────────────
+
+class Conversation {
+  Conversation({
+    required this.id,
+    List<String>? participantIds,
+    this.title = '',
+    DateTime? lastMessageAt,
+    this.isDemo = false,
+  })  : participantIds = participantIds ?? [],
+        lastMessageAt = lastMessageAt ?? DateTime.now();
+
+  String id;
+  List<String> participantIds;
+  String title;
+  DateTime lastMessageAt;
+  bool isDemo;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'participantIds': participantIds,
+        'title': title,
+        'lastMessageAt': lastMessageAt.toIso8601String(),
+        'isDemo': isDemo,
+      };
+
+  factory Conversation.fromJson(Map<String, dynamic> j) => Conversation(
+        id: j['id'] as String,
+        participantIds: _strList(j['participantIds']),
+        title: (j['title'] ?? '') as String,
+        lastMessageAt: _dt(j['lastMessageAt'], DateTime.now()),
+        isDemo: (j['isDemo'] ?? false) as bool,
+      );
+}
+
+class ChatMessage {
+  ChatMessage({
+    required this.id,
+    required this.conversationId,
+    required this.senderId,
+    this.senderName = '',
+    this.body = '',
+    this.imagePath,
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  String id;
+  String conversationId;
+  String senderId;
+  String senderName;
+  String body;
+  String? imagePath;
+  DateTime createdAt;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'conversationId': conversationId,
+        'senderId': senderId,
+        'senderName': senderName,
+        'body': body,
+        'imagePath': imagePath,
+        'createdAt': createdAt.toIso8601String(),
+      };
+
+  factory ChatMessage.fromJson(Map<String, dynamic> j) => ChatMessage(
+        id: j['id'] as String,
+        conversationId: (j['conversationId'] ?? '') as String,
+        senderId: (j['senderId'] ?? '') as String,
+        senderName: (j['senderName'] ?? '') as String,
+        body: (j['body'] ?? '') as String,
+        imagePath: j['imagePath'] as String?,
+        createdAt: _dt(j['createdAt'], DateTime.now()),
       );
 }

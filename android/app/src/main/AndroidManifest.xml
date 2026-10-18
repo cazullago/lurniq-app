@@ -3,6 +3,11 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- Gallery images on Android 13+. image_picker handles older APIs itself. -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- Local notifications: tutor booking alerts, 1v1 session reminder
+         alarms, task reminders (demo-mode, on-device only). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
     <application
         android:label="Lurniq"

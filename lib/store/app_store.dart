@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../core/constants.dart';
 import '../core/json_store.dart';
 import '../core/utils.dart';
+import '../data/course_seed.dart';
 import '../data/seed.dart';
 import '../models/models.dart';
 
@@ -38,6 +39,15 @@ class AppStore extends ChangeNotifier {
   List<Report> reports = [];
   List<AdminLogEntry> adminLog = [];
   List<Announcement> announcements = [];
+  // v2 collections
+  List<Course> courses = [];
+  List<CourseLesson> courseLessons = [];
+  List<CourseEnrollment> enrollments = [];
+  List<TutorBooking> bookings = [];
+  List<LiveSession> liveSessions = [];
+  List<QuizAttempt> quizAttempts = [];
+  List<Conversation> conversations = [];
+  List<ChatMessage> chatMessages = [];
   double commissionRate = C.defaultCommission;
 
   AppUser? currentUser;
@@ -59,6 +69,8 @@ class AppStore extends ChangeNotifier {
     if (uid != null) {
       store.currentUser = store._userById(uid);
     }
+    final key = session['aiApiKey'] as String?;
+    if (key != null && key.isNotEmpty) store._aiApiKey = key;
     return store;
   }
 
@@ -77,6 +89,9 @@ class AppStore extends ChangeNotifier {
     tutors = SeedData.tutors();
     posts = SeedData.posts();
     comments = SeedData.comments();
+    courses = CourseSeed.demoCourses();
+    courseLessons = CourseSeed.demoLessons();
+    liveSessions = CourseSeed.demoLiveSessions();
     commissionRate = C.defaultCommission;
     _scheduleSave();
   }
@@ -99,6 +114,14 @@ class AppStore extends ChangeNotifier {
     reports = list('reports', Report.fromJson);
     adminLog = list('adminLog', AdminLogEntry.fromJson);
     announcements = list('announcements', Announcement.fromJson);
+    courses = list('courses', Course.fromJson);
+    courseLessons = list('courseLessons', CourseLesson.fromJson);
+    enrollments = list('enrollments', CourseEnrollment.fromJson);
+    bookings = list('bookings', TutorBooking.fromJson);
+    liveSessions = list('liveSessions', LiveSession.fromJson);
+    quizAttempts = list('quizAttempts', QuizAttempt.fromJson);
+    conversations = list('conversations', Conversation.fromJson);
+    chatMessages = list('chatMessages', ChatMessage.fromJson);
     commissionRate =
         ((d['commissionRate'] ?? C.defaultCommission) as num).toDouble();
     if (tutors.isEmpty) tutors = SeedData.tutors();
@@ -120,6 +143,14 @@ class AppStore extends ChangeNotifier {
         'reports': reports.map((e) => e.toJson()).toList(),
         'adminLog': adminLog.map((e) => e.toJson()).toList(),
         'announcements': announcements.map((e) => e.toJson()).toList(),
+        'courses': courses.map((e) => e.toJson()).toList(),
+        'courseLessons': courseLessons.map((e) => e.toJson()).toList(),
+        'enrollments': enrollments.map((e) => e.toJson()).toList(),
+        'bookings': bookings.map((e) => e.toJson()).toList(),
+        'liveSessions': liveSessions.map((e) => e.toJson()).toList(),
+        'quizAttempts': quizAttempts.map((e) => e.toJson()).toList(),
+        'conversations': conversations.map((e) => e.toJson()).toList(),
+        'chatMessages': chatMessages.map((e) => e.toJson()).toList(),
       };
 
   void _scheduleSave() {
@@ -143,8 +174,25 @@ class AppStore extends ChangeNotifier {
     if (currentUser == null) {
       await _sessionBox.delete();
     } else {
-      await _sessionBox.writeMap({'userId': currentUser!.id});
+      await _sessionBox.writeMap({
+        'userId': currentUser!.id,
+        // The AI API key is a device secret: it lives in the session box
+        // (never synced, never in the data file) and is never logged.
+        if (_aiApiKey != null) 'aiApiKey': _aiApiKey,
+      });
     }
+  }
+
+  String? _aiApiKey;
+
+  /// User-supplied OpenAI-compatible API key (Settings). Null = demo mode.
+  String? get aiApiKey => _aiApiKey;
+
+  Future<void> setAiApiKey(String? key) async {
+    final v = key?.trim();
+    _aiApiKey = (v == null || v.isEmpty) ? null : v;
+    await _saveSession();
+    notifyListeners();
   }
 
   void _mutate() {
@@ -1106,7 +1154,450 @@ class AppStore extends ChangeNotifier {
     posts.removeWhere((p) => p.isDemo);
     comments.removeWhere(
         (c) => c.isDemo || demoPostIds.contains(c.postId));
+    courses.removeWhere((c) => c.isDemo);
+    courseLessons.removeWhere(
+        (l) => courses.every((c) => c.id != l.courseId));
+    liveSessions.removeWhere((s) => s.isDemo);
+    quizAttempts.removeWhere((a) => a.isDemo);
+    conversations.removeWhere((c) => c.isDemo);
+    chatMessages.removeWhere((m) => m.isDemo);
     users.removeWhere((u) => u.demoSeed);
     _mutate();
   }
+
+  // ── v2: theme & settings ───────────────────────────────
+
+  ThemeModeSetting get themeModeSetting {
+    final m = currentUser?.themeMode ?? 'system';
+    return ThemeModeSetting.values.firstWhere(
+      (e) => e.name == m,
+      orElse: () => ThemeModeSetting.system,
+    );
+  }
+
+  Future<void> setThemeMode(ThemeModeSetting mode) async {
+    final u = currentUser;
+    if (u == null) return;
+    u.themeMode = mode.name;
+    await updateProfile(u);
+  }
+
+  // ── v2: tasks (types, Done folder, grades) ─────────────
+
+  List<StudyTask> openTasks() {
+    final uid = currentUser?.id;
+    return tasks
+        .where((t) => t.ownerId == uid && !t.isDone)
+        .toList()
+      ..sort((a, b) => _taskSort(a, b));
+  }
+
+  List<StudyTask> doneTasks() {
+    final uid = currentUser?.id;
+    return tasks
+        .where((t) => t.ownerId == uid && t.isDone)
+        .toList()
+      ..sort((a, b) =>
+          (b.completedAt ?? b.createdAt).compareTo(a.completedAt ?? a.createdAt));
+  }
+
+  int _taskSort(StudyTask a, StudyTask b) {
+    int prio(String p) =>
+        p == 'high' ? 0 : (p == 'medium' ? 1 : 2);
+    final ap = prio(a.priority), bp = prio(b.priority);
+    if (ap != bp) return ap - bp;
+    final ad = a.dueAtLocal, bd = b.dueAtLocal;
+    if (ad == null && bd == null) return 0;
+    if (ad == null) return 1;
+    if (bd == null) return -1;
+    return ad.compareTo(bd);
+  }
+
+  StudyTask? taskById(String id) {
+    for (final t in tasks) {
+      if (t.id == id) return t;
+    }
+    return null;
+  }
+
+  Future<void> completeTask(String id) async {
+    final t = taskById(id);
+    if (t == null) return;
+    t.status = 'done';
+    t.completedAt = DateTime.now();
+    _mutate();
+  }
+
+  Future<void> reopenTask(String id) async {
+    final t = taskById(id);
+    if (t == null) return;
+    t.status = 'todo';
+    t.completedAt = null;
+    _mutate();
+  }
+
+  Future<void> saveGrade(
+    String id, {
+    required String score,
+    String note = '',
+    String? photoPath,
+  }) async {
+    final t = taskById(id);
+    if (t == null) return;
+    t.gradeScore = score.trim();
+    t.gradeNote = note.trim();
+    if (photoPath != null) t.gradePhotoPath = photoPath;
+    _mutate();
+  }
+
+  // ── v2: courses ────────────────────────────────────────
+
+  List<Course> visibleCourses({
+    String? subject,
+    String? level,
+    String? query,
+    bool? freeOnly,
+  }) {
+    final q = (query ?? '').trim().toLowerCase();
+    final list = courses.where((c) {
+      if (!c.published) return false;
+      if (subject != null && subject.isNotEmpty && c.subject != subject) {
+        return false;
+      }
+      if (level != null && level.isNotEmpty && c.level != level) return false;
+      if (freeOnly == true && c.priceUsd > 0) return false;
+      if (q.isNotEmpty) {
+        final hay = '${c.title} ${c.description} ${c.subject}'.toLowerCase();
+        if (!hay.contains(q)) return false;
+      }
+      return true;
+    }).toList()
+      ..sort((a, b) => b.enrollmentCount.compareTo(a.enrollmentCount));
+    return list;
+  }
+
+  Course? courseById(String id) {
+    for (final c in courses) {
+      if (c.id == id) return c;
+    }
+    return null;
+  }
+
+  List<CourseLesson> lessonsFor(String courseId) {
+    final list =
+        courseLessons.where((l) => l.courseId == courseId).toList()
+          ..sort((a, b) => a.order.compareTo(b.order));
+    return list;
+  }
+
+  Future<Course> createCourse(Course draft) async {
+    courses.add(draft);
+    _mutate();
+    return draft;
+  }
+
+  Future<void> updateCourse(Course updated) async {
+    final i = courses.indexWhere((c) => c.id == updated.id);
+    if (i >= 0) {
+      courses[i] = updated;
+      _mutate();
+    }
+  }
+
+  Future<void> deleteCourse(String id) async {
+    courses.removeWhere((c) => c.id == id);
+    courseLessons.removeWhere((l) => l.courseId == id);
+    enrollments.removeWhere((e) => e.courseId == id);
+    _mutate();
+  }
+
+  Future<void> setCoursePublished(String id, bool published) async {
+    final c = courseById(id);
+    if (c == null) return;
+    c.published = published;
+    _mutate();
+  }
+
+  Future<void> saveCourseLesson(CourseLesson lesson) async {
+    final i = courseLessons.indexWhere((l) => l.id == lesson.id);
+    if (i >= 0) {
+      courseLessons[i] = lesson;
+    } else {
+      courseLessons.add(lesson);
+    }
+    _mutate();
+  }
+
+  Future<void> deleteCourseLesson(String id) async {
+    courseLessons.removeWhere((l) => l.id == id);
+    _mutate();
+  }
+
+  bool isEnrolled(String courseId) {
+    final uid = currentUser?.id;
+    return enrollments
+        .any((e) => e.courseId == courseId && e.studentId == uid);
+  }
+
+  CourseEnrollment? enrollmentFor(String courseId) {
+    final uid = currentUser?.id;
+    for (final e in enrollments) {
+      if (e.courseId == courseId && e.studentId == uid) return e;
+    }
+    return null;
+  }
+
+  Future<void> enrollInCourse(String courseId) async {
+    final uid = currentUser?.id;
+    if (uid == null || isEnrolled(courseId)) return;
+    enrollments.add(CourseEnrollment(
+      id: newId(),
+      courseId: courseId,
+      studentId: uid,
+    ));
+    final c = courseById(courseId);
+    if (c != null) c.enrollmentCount++;
+    _mutate();
+  }
+
+  Future<void> markLessonDone(String courseId, String lessonId) async {
+    final e = enrollmentFor(courseId);
+    if (e == null || e.doneLessonIds.contains(lessonId)) return;
+    e.doneLessonIds.add(lessonId);
+    _mutate();
+  }
+
+  double courseProgress(String courseId) {
+    final lessons = lessonsFor(courseId);
+    if (lessons.isEmpty) return 0;
+    final e = enrollmentFor(courseId);
+    if (e == null) return 0;
+    final done =
+        lessons.where((l) => e.doneLessonIds.contains(l.id)).length;
+    return done / lessons.length;
+  }
+
+  List<Course> myEnrolledCourses() {
+    final uid = currentUser?.id;
+    final ids =
+        enrollments.where((e) => e.studentId == uid).map((e) => e.courseId);
+    return courses.where((c) => ids.contains(c.id)).toList();
+  }
+
+  // ── v2: 1v1 bookings ───────────────────────────────────
+
+  Future<TutorBooking> requestBooking({
+    required String tutorId,
+    required String tutorName,
+    required DateTime startsAtUtc,
+    required int durationMin,
+    String meetingLink = '',
+    String note = '',
+  }) async {
+    final me = currentUser!;
+    final b = TutorBooking(
+      id: newId(),
+      tutorId: tutorId,
+      tutorName: tutorName,
+      studentId: me.id,
+      studentName: me.displayName,
+      startsAtUtc: startsAtUtc,
+      durationMin: durationMin,
+      meetingLink: meetingLink,
+      note: note,
+    );
+    bookings.add(b);
+    _mutate();
+    return b;
+  }
+
+  TutorBooking? bookingById(String id) {
+    for (final b in bookings) {
+      if (b.id == id) return b;
+    }
+    return null;
+  }
+
+  List<TutorBooking> myBookings() {
+    final uid = currentUser?.id;
+    final list =
+        bookings.where((b) => b.studentId == uid).toList()
+          ..sort((a, b) {
+            final at = a.startsAtUtc, bt = b.startsAtUtc;
+            if (at == null && bt == null) return 0;
+            if (at == null) return 1;
+            if (bt == null) return -1;
+            return at.compareTo(bt);
+          });
+    return list;
+  }
+
+  Future<void> setBookingStatus(String id, String status) async {
+    final b = bookingById(id);
+    if (b == null) return;
+    b.status = status;
+    if (status == 'completed') {
+      // completedAt is implied by status; keep the record.
+    }
+    _mutate();
+  }
+
+  Future<void> leaveBookingReview(
+    String id, {
+    required double rating,
+    required String text,
+  }) async {
+    final b = bookingById(id);
+    if (b == null) return;
+    b.reviewRating = rating;
+    b.reviewText = text.trim();
+    _mutate();
+  }
+
+  // ── v2: live sessions & quizzes ────────────────────────
+
+  List<LiveSession> visibleLiveSessions() {
+    final list = liveSessions.toList()
+      ..sort((a, b) {
+        int rank(String s) =>
+            s == 'live' ? 0 : (s == 'scheduled' ? 1 : 2);
+        final r = rank(a.status) - rank(b.status);
+        if (r != 0) return r;
+        final at = a.startsAtUtc, bt = b.startsAtUtc;
+        if (at == null && bt == null) return 0;
+        if (at == null) return 1;
+        if (bt == null) return -1;
+        return at.compareTo(bt);
+      });
+    return list;
+  }
+
+  LiveSession? liveSessionById(String id) {
+    for (final s in liveSessions) {
+      if (s.id == id) return s;
+    }
+    return null;
+  }
+
+  Future<LiveSession> createLiveSession(LiveSession draft) async {
+    liveSessions.add(draft);
+    _mutate();
+    return draft;
+  }
+
+  Future<void> updateLiveSession(LiveSession updated) async {
+    final i = liveSessions.indexWhere((s) => s.id == updated.id);
+    if (i >= 0) {
+      liveSessions[i] = updated;
+      _mutate();
+    }
+  }
+
+  Future<void> setLiveStatus(String id, String status) async {
+    final s = liveSessionById(id);
+    if (s == null) return;
+    s.status = status;
+    _mutate();
+  }
+
+  Future<void> submitQuizAttempt(QuizAttempt attempt) async {
+    quizAttempts.add(attempt);
+    _mutate();
+  }
+
+  List<QuizAttempt> attemptsFor(String sessionId) {
+    final list = quizAttempts
+        .where((a) => a.sessionId == sessionId)
+        .toList()
+      ..sort((a, b) => b.score.compareTo(a.score));
+    return list;
+  }
+
+  // ── v2: messaging (demo-mode, on-device) ───────────────
+
+  List<Conversation> myConversations() {
+    final uid = currentUser?.id;
+    final list = conversations
+        .where((c) => c.participantIds.contains(uid))
+        .toList()
+      ..sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
+    return list;
+  }
+
+  Conversation conversationWith(String otherUserId) {
+    final uid = currentUser?.id ?? '';
+    for (final c in conversations) {
+      final p = c.participantIds;
+      if (p.length == 2 && p.contains(uid) && p.contains(otherUserId)) {
+        return c;
+      }
+    }
+    final other = displayNameFor(otherUserId);
+    final c = Conversation(
+      id: newId(),
+      participantIds: [uid, otherUserId],
+      title: other,
+    );
+    conversations.add(c);
+    _mutate();
+    return c;
+  }
+
+  List<ChatMessage> messagesFor(String conversationId) {
+    final list = chatMessages
+        .where((m) => m.conversationId == conversationId)
+        .toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    return list;
+  }
+
+  Future<ChatMessage> sendMessage(
+    String conversationId, {
+    String body = '',
+    String? imagePath,
+  }) async {
+    final me = currentUser!;
+    final m = ChatMessage(
+      id: newId(),
+      conversationId: conversationId,
+      senderId: me.id,
+      senderName: me.displayName,
+      body: body.trim(),
+      imagePath: imagePath,
+    );
+    chatMessages.add(m);
+    for (final c in conversations) {
+      if (c.id == conversationId) {
+        c.lastMessageAt = DateTime.now();
+        break;
+      }
+    }
+    _mutate();
+    return m;
+  }
+
+  Future<void> deleteConversation(String id) async {
+    conversations.removeWhere((c) => c.id == id);
+    chatMessages.removeWhere((m) => m.conversationId == id);
+    _mutate();
+  }
+
+  /// Best-effort display name for any id (users first, then demo tutors).
+  String displayNameFor(String id) {
+    final u = _userById(id);
+    if (u != null) return u.displayName;
+    for (final t in tutors) {
+      if (t.id == id) return t.name;
+    }
+    return 'Lurniq user';
+  }
+
+  String? avatarFor(String id) {
+    final u = _userById(id);
+    return u?.avatarPath;
+  }
+}
+
+/// Theme preference. Stored on the user as a string for JSON compatibility.
+enum ThemeModeSetting { system, light, dark }
 }

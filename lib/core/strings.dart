@@ -483,4 +483,136 @@ class S {
   static const minutesAgo = 'm ago';
   static const hoursAgo = 'h ago';
   static const daysAgo = 'd ago';
+
+  // ── v2: Theme ──────────────────────────────────────────
+  static const appearance = 'Appearance';
+  static const themeMode = 'Day / night mode';
+  static const themeSystem = 'Follow system';
+  static const themeLight = 'Day';
+  static const themeDark = 'Night';
+  static const notSet = 'Not set';
+
+  // ── v2: Planner tasks ──────────────────────────────────
+  static const taskType = 'Task type';
+  static const taskTypeHint = 'What kind of task is this?';
+  static const doneFolder = 'Done';
+  static const doneFolderSubtitle =
+      'Finished tasks live here as your performance record.';
+  static const markDone = 'Mark as done';
+  static const reopenTask = 'Move back to to-do';
+  static const logGrade = 'Log grade';
+  static const gradeScoreHint = 'Score (e.g. 95/100 or A)';
+  static const gradeNoteHint = 'Note (optional)';
+  static const gradePhotoHint = 'Photo of your result (optional)';
+  static const askAi = 'Ask AI';
+  static const aiDemoBadge = 'Demo AI';
+  static const aiDemoNote =
+      'Demo AI gives guided, template-based help. Add your own API key in Settings for full AI answers.';
+  static const aiApiKey = 'AI API key';
+  static const aiApiKeyHint =
+      'Paste an OpenAI-compatible API key. It stays on this device and is never shared.';
+  static const aiApiKeySaved = 'API key saved on this device.';
+  static const aiPlaceholder = 'Ask about this task or lesson…';
+  static const aiThinking = 'Thinking…';
+
+  // ── v2: Messaging ──────────────────────────────────────
+  static const messages = 'Messages';
+  static const messagesDemoNote =
+      'Demo messaging — conversations live on this device only for now.';
+  static const newMessage = 'New message';
+  static const typeMessage = 'Type a message…';
+  static const messageButton = 'Message';
+  static const blockUser = 'Block';
+  static const unblockUser = 'Unblock';
+  static const reportUser = 'Report';
+  static const noConversations = 'No conversations yet';
+  static const noConversationsBody =
+      'Tap Message on someone\u2019s profile to start chatting.';
+
+  // ── v2: Tutor — courses ────────────────────────────────
+  static const findTutors = 'Find Tutors';
+  static const courses = 'Courses';
+  static const countryFilter = 'Country';
+  static const everyone = 'Everyone';
+  static const myCountryOnly = 'My country only';
+  static const createCourse = 'Create course';
+  static const editCourse = 'Edit course';
+  static const courseTitle = 'Course title';
+  static const courseDescription = 'Description';
+  static const addLesson = 'Add lesson';
+  static const lessonTitle = 'Lesson title';
+  static const lessonKind = 'Lesson format';
+  static const lessonVideo = 'Video';
+  static const lessonSlides = 'Slides / text';
+  static const videoUrlHint = 'Video link (https://…)';
+  static const lessonBodyHint = 'Lesson content…';
+  static const enroll = 'Enroll';
+  static const enrolled = 'Enrolled';
+  static const continueCourse = 'Continue';
+  static const publish = 'Publish';
+  static const unpublish = 'Unpublish';
+  static const published = 'Published';
+  static const draft = 'Draft';
+  static const myCourses = 'My courses';
+  static const noCourses = 'No courses yet';
+  static const noCoursesBody =
+      'Tutors can publish pre-made video or slide lessons here.';
+  static const courseEnrolledMsg = 'You\u2019re enrolled! Happy learning.';
+  static const lessonDone = 'Mark lesson done';
+
+  // ── v2: Tutor — 1v1 bookings ──────────────────────────
+  static const bookSession = 'Book 1v1 session';
+  static const myBookings = 'My sessions';
+  static const bookingDateTime = 'Session date & time';
+  static const bookingDuration = 'Duration';
+  static const minutes = 'min';
+  static const meetingLink = 'Meeting link';
+  static const meetingLinkHint = 'Zoom / Google Meet link (https://…)';
+  static const bookingNoteHint = 'What do you want to work on? (optional)';
+  static const sendRequest = 'Send request';
+  static const bookingSent = 'Request sent! The tutor can accept or decline.';
+  static const accept = 'Accept';
+  static const decline = 'Decline';
+  static const bookingAccepted = 'Booking accepted. Reminder set!';
+  static const bookingDeclined = 'Booking declined.';
+  static const pendingRequests = 'Pending requests';
+  static const upcomingSessions = 'Upcoming sessions';
+  static const pastSessions = 'Past sessions';
+  static const leaveReview = 'Leave a review';
+  static const reviewHint = 'How was the session?';
+  static const reviewThanks = 'Thanks for your review!';
+  static const joinMeeting = 'Join meeting';
+  static const bookingReminderTitle = 'Tutoring session soon';
+  static const bookingReminderBody = 'Your 1v1 session starts in 15 minutes.';
+  static const courseEnrollTitle = 'New course enrollment';
+  static const bookingRequestTitle = 'New 1v1 booking request';
+
+  // ── v2: Tutor — live sessions & quizzes ────────────────
+  static const live = 'Live';
+  static const scheduleLive = 'Schedule live session';
+  static const liveTitle = 'Session title';
+  static const goLive = 'Go live';
+  static const endSession = 'End session';
+  static const liveNow = 'LIVE NOW';
+  static const noLive = 'No live sessions right now';
+  static const noLiveBody =
+      'Tutors can schedule public live sessions with interactive quizzes.';
+  static const liveChat = 'Live chat';
+  static const liveQuiz = 'Live quiz';
+  static const createQuiz = 'Create quiz';
+  static const addQuestion = 'Add question';
+  static const questionHint = 'Question';
+  static const optionHint = 'Option';
+  static const correctAnswer = 'Correct answer';
+  static const timerSeconds = 'Seconds per question';
+  static const startQuiz = 'Start quiz';
+  static const yourAnswer = 'Your answer';
+  static const correct = 'Correct!';
+  static const incorrect = 'Not quite';
+  static const timeUp = 'Time\u2019s up!';
+  static const quizScore = 'Your score';
+  static const scoreboard = 'Scoreboard';
+  static const answersHiddenNote =
+      'Answers stay hidden until the timer ends.';
+  static const openMeetingLink = 'Open meeting link';
 }

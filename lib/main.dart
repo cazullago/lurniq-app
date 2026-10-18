@@ -14,6 +14,7 @@ import 'screens/feed/feed_tab.dart';
 import 'screens/planner/planner_tab.dart';
 import 'screens/profile/profile_tab.dart';
 import 'screens/tutor/tutor_tab.dart';
+import 'services/notify_service.dart';
 import 'store/app_store.dart';
 
 /// Crash-proof bootstrap (see AGENTS.md):
@@ -42,6 +43,12 @@ Future<void> _boot() async {
   try {
     final dir = await getApplicationDocumentsDirectory();
     final store = await AppStore.load(dir);
+    // Local notifications must never break startup: guarded separately.
+    try {
+      await NotifyService.instance.init();
+    } catch (e) {
+      debugPrint('NotifyService.init failed (non-fatal): $e');
+    }
     runApp(LurniqApp(store: store));
   } catch (e, st) {
     runApp(BootErrorApp(error: e, stack: st, onRetry: _boot));
@@ -57,13 +64,23 @@ class LurniqApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
       value: store,
-      child: MaterialApp(
-        title: S.appName,
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
-        themeMode: ThemeMode.system,
-        debugShowCheckedModeBanner: false,
-        home: const _AuthGate(),
+      child: Builder(
+        builder: (ctx) {
+          final setting = ctx.watch<AppStore>().themeModeSetting;
+          final mode = switch (setting) {
+            ThemeModeSetting.light => ThemeMode.light,
+            ThemeModeSetting.dark => ThemeMode.dark,
+            ThemeModeSetting.system => ThemeMode.system,
+          };
+          return MaterialApp(
+            title: S.appName,
+            theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
+            themeMode: mode,
+            debugShowCheckedModeBanner: false,
+            home: const _AuthGate(),
+          );
+        },
       ),
     );
   }

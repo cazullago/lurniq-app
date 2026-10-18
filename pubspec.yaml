@@ -1,7 +1,7 @@
 name: lurniq
 description: "Lurniq — a smarter way to learn. A global student learning and study app."
 publish_to: "none"
-version: 1.0.0+1
+version: 2.0.0+2
 
 environment:
   sdk: ^3.13.4
@@ -18,6 +18,11 @@ dependencies:
   # android-36 build. Revisit only when compileSdk moves to 37+.
   permission_handler: ^12.0.3
   url_launcher: ^6.3.2
+  # Local notifications: tutor booking alerts, 1v1 session reminder alarms,
+  # task reminders. v19 needs core-library desugaring on android-36 builds
+  # (see android/app/build.gradle.kts).
+  flutter_local_notifications: ^19.5.0
+  timezone: ^0.11.2
 
 dev_dependencies:
   flutter_test:
