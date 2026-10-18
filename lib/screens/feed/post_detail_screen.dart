@@ -9,6 +9,7 @@ import '../../core/strings.dart';
 import '../../core/utils.dart';
 import '../../models/models.dart';
 import '../../store/app_store.dart';
+import '../../widgets/tappable_name.dart';
 import '../../widgets/ui.dart';
 
 /// Full post view: content, study-group management, comments + replies,
@@ -123,7 +124,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(post.authorName,
+                      TappableName(
+                          userId: post.authorId,
+                          name: post.authorName,
                           style: const TextStyle(
                               fontWeight: FontWeight.w700)),
                       Text(
@@ -656,8 +659,9 @@ class _CommentTile extends StatelessWidget {
                     name: comment.authorName, radius: 15),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    comment.authorName,
+                  child: TappableName(
+                    userId: comment.authorId,
+                    name: comment.authorName,
                     style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 13),
@@ -828,8 +832,9 @@ class _ReplyRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                reply.authorName,
+              TappableName(
+                userId: reply.authorId,
+                name: reply.authorName,
                 style: const TextStyle(
                     fontWeight: FontWeight.w700, fontSize: 12),
               ),

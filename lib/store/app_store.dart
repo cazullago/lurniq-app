@@ -48,6 +48,10 @@ class AppStore extends ChangeNotifier {
   List<QuizAttempt> quizAttempts = [];
   List<Conversation> conversations = [];
   List<ChatMessage> chatMessages = [];
+  // v2: subscription entitlement + AI demo quota
+  Entitlement entitlement = Entitlement();
+  String aiDemoQuotaDate = '';
+  int aiDemoQuotaUsed = 0;
   double commissionRate = C.defaultCommission;
 
   AppUser? currentUser;
@@ -122,6 +126,12 @@ class AppStore extends ChangeNotifier {
     quizAttempts = list('quizAttempts', QuizAttempt.fromJson);
     conversations = list('conversations', Conversation.fromJson);
     chatMessages = list('chatMessages', ChatMessage.fromJson);
+    final entJson = d['entitlement'];
+    entitlement = entJson is Map<String, dynamic>
+        ? Entitlement.fromJson(entJson)
+        : Entitlement();
+    aiDemoQuotaDate = (d['aiDemoQuotaDate'] ?? '') as String;
+    aiDemoQuotaUsed = (d['aiDemoQuotaUsed'] ?? 0) as int;
     commissionRate =
         ((d['commissionRate'] ?? C.defaultCommission) as num).toDouble();
     if (tutors.isEmpty) tutors = SeedData.tutors();
@@ -151,6 +161,9 @@ class AppStore extends ChangeNotifier {
         'quizAttempts': quizAttempts.map((e) => e.toJson()).toList(),
         'conversations': conversations.map((e) => e.toJson()).toList(),
         'chatMessages': chatMessages.map((e) => e.toJson()).toList(),
+        'entitlement': entitlement.toJson(),
+        'aiDemoQuotaDate': aiDemoQuotaDate,
+        'aiDemoQuotaUsed': aiDemoQuotaUsed,
       };
 
   void _scheduleSave() {
@@ -1600,4 +1613,47 @@ class AppStore extends ChangeNotifier {
 
 /// Theme preference. Stored on the user as a string for JSON compatibility.
 enum ThemeModeSetting { system, light, dark }
+
+extension SubscriptionApi on AppStore {
+  /// Free tier: 5 demo-AI questions/day unless the user added their own key.
+  static const int freeDailyAiQuota = 5;
+
+  bool get isPlus => entitlement.isPlus;
+
+  /// True when AI answers are unlimited: Plus plan, or the user supplied
+  /// their own API key (their key, their quota).
+  bool get aiUnlimited => isPlus || aiApiKey != null;
+
+  /// Play Billing (or tests/admin) writes the entitlement here. Call sites
+  /// never change when real billing lands.
+  Future<void> setEntitlement(Entitlement e) async {
+    entitlement = e;
+    _mutate();
+  }
+
+  String _todayKey() {
+    final n = DateTime.now();
+    return '${n.year}-${n.month.toString().padLeft(2, '0')}-${n.day.toString().padLeft(2, '0')}';
+  }
+
+  /// Remaining demo-AI questions today. -1 means unlimited.
+  int demoAiQuotaRemaining() {
+    if (aiUnlimited) return -1;
+    if (aiDemoQuotaDate != _todayKey()) return freeDailyAiQuota;
+    final left = freeDailyAiQuota - aiDemoQuotaUsed;
+    return left < 0 ? 0 : left;
+  }
+
+  /// Returns true if the question may proceed (and counts it).
+  Future<bool> consumeDemoAiQuota() async {
+    if (aiUnlimited) return true;
+    if (demoAiQuotaRemaining() <= 0) return false;
+    if (aiDemoQuotaDate != _todayKey()) {
+      aiDemoQuotaDate = _todayKey();
+      aiDemoQuotaUsed = 0;
+    }
+    aiDemoQuotaUsed++;
+    _mutate();
+    return true;
+  }
 }

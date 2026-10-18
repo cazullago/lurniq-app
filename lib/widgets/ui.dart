@@ -30,6 +30,8 @@ class DemoChip extends StatelessWidget {
   }
 }
 
+/// Warm, friendly empty state with a soft tinted icon medallion.
+/// API unchanged — existing call sites keep working.
 class EmptyState extends StatelessWidget {
   const EmptyState({
     super.key,
@@ -59,8 +61,26 @@ class EmptyState extends StatelessWidget {
               width: 88,
               height: 88,
               decoration: BoxDecoration(
-                color: scheme.primaryContainer.withValues(alpha: 0.5),
+                // Soft warm gradient: welcoming rather than flat.
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    scheme.tertiaryContainer
+                        .withValues(alpha: 0.9),
+                    scheme.primaryContainer
+                        .withValues(alpha: 0.55),
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: scheme.primary
+                        .withValues(alpha: 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
               child: Icon(icon, size: 44, color: scheme.primary),
             ),
@@ -97,6 +117,7 @@ class EmptyState extends StatelessWidget {
   }
 }
 
+/// Section header with a warm accent bar. API unchanged.
 class SectionHeader extends StatelessWidget {
   const SectionHeader({super.key, required this.title, this.action});
 
@@ -105,17 +126,27 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Row(
         children: [
+          Container(
+            width: 4,
+            height: 20,
+            decoration: BoxDecoration(
+              color: scheme.tertiary,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               title,
               style: Theme.of(context)
                   .textTheme
                   .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w700),
+                  ?.copyWith(fontWeight: FontWeight.w800),
             ),
           ),
           if (action case final Widget a) a,

@@ -11,6 +11,7 @@ import '../../store/app_store.dart';
 import '../../widgets/ui.dart';
 import 'folder_detail_screen.dart';
 import 'lesson_detail_screen.dart';
+import 'task_detail_screen.dart';
 import 'task_form_screen.dart';
 
 /// Smart school organizer: subject folders, lesson capture, tasks, calendar.
@@ -466,39 +467,13 @@ class _TasksView extends StatefulWidget {
 }
 
 class _TasksViewState extends State<_TasksView> {
-  String _filter = 'all';
-
-  List<StudyTask> _filtered(AppStore store) {
-    switch (_filter) {
-      case 'upcoming':
-        return store.sortedTasks(store.upcomingTasks());
-      case 'overdue':
-        return store.sortedTasks(store.overdueTasks);
-      case 'done':
-        return store.sortedTasks(
-            store.myTasks.where((t) => t.isDone).toList());
-      case 'high':
-        return store.sortedTasks(store.myTasks
-            .where((t) =>
-                t.priority == 'high' && !t.isDone)
-            .toList());
-      case 'all':
-      default:
-        return store.sortedTasks(store.myTasks);
-    }
-  }
+  String _segment = 'todo';
 
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
-    final tasks = _filtered(store);
-    const filters = [
-      ('all', S.allTasks),
-      ('upcoming', S.upcoming),
-      ('overdue', S.overdue),
-      ('high', S.priorityHigh),
-      ('done', S.completed),
-    ];
+    final isDone = _segment == 'done';
+    final tasks = isDone ? store.doneTasks() : store.openTasks();
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.of(context).push(
@@ -510,27 +485,42 @@ class _TasksViewState extends State<_TasksView> {
       ),
       body: Column(
         children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
+          Padding(
             padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              children: filters
-                  .map(
-                    (f) => Padding(
-                      padding:
-                          const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(f.$2),
-                        selected: _filter == f.$1,
-                        onSelected: (_) =>
-                            setState(() => _filter = f.$1),
-                      ),
-                    ),
-                  )
-                  .toList(),
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(
+                  value: 'todo',
+                  icon: Icon(Icons.checklist_rounded, size: 18),
+                  label: Text(S.statusTodo),
+                ),
+                ButtonSegment(
+                  value: 'done',
+                  icon:
+                      Icon(Icons.emoji_events_outlined, size: 18),
+                  label: Text(S.doneFolder),
+                ),
+              ],
+              selected: {_segment},
+              onSelectionChanged: (s) =>
+                  setState(() => _segment = s.first),
             ),
           ),
+          if (isDone)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Text(S.doneFolderSubtitle,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant)),
+            ),
+          const SizedBox(height: 4),
           Expanded(
             child: tasks.isEmpty
                 ? EmptyState(
@@ -549,11 +539,111 @@ class _TasksViewState extends State<_TasksView> {
                     padding:
                         const EdgeInsets.fromLTRB(12, 4, 12, 80),
                     itemCount: tasks.length,
-                    itemBuilder: (context, i) =>
-                        TaskTile(task: tasks[i]),
+                    itemBuilder: (context, i) => isDone
+                        ? _DoneTaskTile(task: tasks[i])
+                        : TaskTile(task: tasks[i]),
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Done-folder row: title, type, completed date, grade badge if logged.
+/// The performance record lives here.
+class _DoneTaskTile extends StatelessWidget {
+  const _DoneTaskTile({required this.task});
+
+  final StudyTask task;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+              builder: (_) =>
+                  TaskDetailScreen(taskId: task.id)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.check_rounded,
+                    color: scheme.onPrimaryContainer),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      task.title,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15),
+                    ),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        _MiniChip(
+                            icon: Icons.category_outlined,
+                            label: task.typeLabel.isEmpty
+                                ? S.notSet
+                                : task.typeLabel),
+                        if (task.completedAt != null)
+                          _MiniChip(
+                              icon:
+                                  Icons.event_available_outlined,
+                              label: fmtDate(task.completedAt!)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (task.gradeScore.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: scheme.tertiaryContainer,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.grade_rounded,
+                          size: 15,
+                          color: scheme.onTertiaryContainer),
+                      const SizedBox(width: 4),
+                      Text(
+                        task.gradeScore,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: scheme.onTertiaryContainer,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -577,7 +667,7 @@ class TaskTile extends StatelessWidget {
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(
               builder: (_) =>
-                  TaskFormScreen(taskId: task.id)),
+                  TaskDetailScreen(taskId: task.id)),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(

@@ -8,6 +8,7 @@ import '../../core/strings.dart';
 import '../../core/utils.dart';
 import '../../models/models.dart';
 import '../../store/app_store.dart';
+import '../../widgets/tappable_name.dart';
 import '../../widgets/ui.dart';
 import 'post_detail_screen.dart';
 
@@ -54,11 +55,11 @@ class PostCard extends StatelessWidget {
                         Row(
                           children: [
                             Flexible(
-                              child: Text(
-                                post.authorName,
+                              child: TappableName(
+                                userId: post.authorId,
+                                name: post.authorName,
                                 style: const TextStyle(
                                     fontWeight: FontWeight.w700),
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             if (post.isDemo) ...[

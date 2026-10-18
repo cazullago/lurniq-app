@@ -6,9 +6,9 @@ import '../../core/utils.dart';
 import '../../models/models.dart';
 import '../../store/app_store.dart';
 import '../../widgets/ui.dart';
+import 'booking_form_screen.dart';
 
-/// Tutor profile detail. Phase 1: read-only + reviews. Bookings arrive in
-/// Phase 3 — the CTA explains that honestly instead of faking a booking.
+/// Tutor profile detail. Reviews + 1v1 booking requests.
 class TutorDetailScreen extends StatelessWidget {
   const TutorDetailScreen({super.key, required this.tutorId});
 
@@ -189,8 +189,15 @@ class TutorDetailScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: FilledButton(
-              onPressed: () => _bookingInfo(context),
-              child: const Text(S.bookingsPhase3),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => BookingFormScreen(
+                    tutorId: tutor.id,
+                    tutorName: tutor.name,
+                  ),
+                ),
+              ),
+              child: const Text(S.bookSession),
             ),
           ),
           Padding(
@@ -217,22 +224,6 @@ class TutorDetailScreen extends StatelessWidget {
       default:
         return S.verificationUnverifiedDetail;
     }
-  }
-
-  void _bookingInfo(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(S.tutorTitle),
-        content: const Text(S.bookingsPhase3),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(S.ok),
-          ),
-        ],
-      ),
-    );
   }
 
   void _writeReview(BuildContext context, Tutor tutor) {

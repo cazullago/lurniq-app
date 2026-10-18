@@ -7,9 +7,11 @@ import '../../models/models.dart';
 import '../../store/app_store.dart';
 import '../../widgets/ui.dart';
 import '../feed/post_card.dart';
+import '../messages/conversation_screen.dart';
 
-/// Another student's profile, with per-field privacy respected.
-/// Messaging arrives in Phase 4 — there is intentionally no message button.
+/// Another person's profile, with per-field privacy respected.
+/// Works for both students ([AppUser]) and marketplace tutors ([Tutor]):
+/// when the id isn't a user, it falls back to the tutor record.
 class UserProfileScreen extends StatelessWidget {
   const UserProfileScreen({super.key, required this.userId});
 
@@ -26,20 +28,26 @@ class UserProfileScreen extends StatelessWidget {
     return false;
   }
 
+  Tutor? _tutorOf(AppStore store) {
+    for (final t in store.tutors) {
+      if (t.id == userId) return t;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
     final me = store.currentUser;
-    final user = store.userById(userId);
-    if (me == null || user == null) {
-      return Scaffold(
-        appBar: AppBar(),
-        body: const EmptyState(
-          icon: Icons.person_off_outlined,
-          title: S.somethingWrong,
-        ),
-      );
+    if (me == null) {
+      return const Scaffold(
+          body: Center(child: CircularProgressIndicator()));
     }
+    final user = store.userById(userId);
+    if (user == null) {
+      return _TutorProfile(userId: userId, tutor: _tutorOf(store));
+    }
+    final isOwn = me.id == user.id;
     if (store.isBlocked(userId)) {
       return Scaffold(
         appBar: AppBar(),
@@ -76,32 +84,37 @@ class UserProfileScreen extends StatelessWidget {
       );
     }
 
+    final showEducation =
+        user.educationLevel.isNotEmpty &&
+            _canSee(me, user, 'educationLevel');
+
     return Scaffold(
       appBar: AppBar(
         title: Text(user.displayName),
         actions: [
-          PopupMenuButton<String>(
-            onSelected: (v) async {
-              if (v == 'block') {
-                final ok = await confirmDialog(
-                  context,
-                  title: S.blockUser,
-                  body: S.blockUserConfirm,
-                );
-                if (ok) {
-                  store.block(userId);
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                    showSnack(context, S.userBlocked);
+          if (!isOwn)
+            PopupMenuButton<String>(
+              onSelected: (v) async {
+                if (v == 'block') {
+                  final ok = await confirmDialog(
+                    context,
+                    title: S.blockUser,
+                    body: S.blockUserConfirm,
+                  );
+                  if (ok) {
+                    store.block(userId);
+                    if (context.mounted) {
+                      Navigator.of(context).pop();
+                      showSnack(context, S.userBlocked);
+                    }
                   }
                 }
-              }
-            },
-            itemBuilder: (ctx) => const [
-              PopupMenuItem(
-                  value: 'block', child: Text(S.blockUser)),
-            ],
-          ),
+              },
+              itemBuilder: (ctx) => const [
+                PopupMenuItem(
+                    value: 'block', child: Text(S.blockUser)),
+              ],
+            ),
         ],
       ),
       body: ListView(
@@ -133,16 +146,54 @@ class UserProfileScreen extends StatelessWidget {
                           style: TextStyle(
                               color:
                                   scheme.onSurfaceVariant)),
+                      if (showEducation)
+                        Padding(
+                          padding:
+                              const EdgeInsets.only(top: 6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: scheme.primaryContainer,
+                              borderRadius:
+                                  BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                    Icons.school_outlined,
+                                    size: 15,
+                                    color: scheme
+                                        .onPrimaryContainer),
+                                const SizedBox(width: 5),
+                                Flexible(
+                                  child: Text(
+                                    user.educationLevel,
+                                    style: TextStyle(
+                                      fontWeight:
+                                          FontWeight.w800,
+                                      fontSize: 13,
+                                      color: scheme
+                                          .onPrimaryContainer,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
-                FilledButton.tonal(
-                  onPressed: () => following
-                      ? store.unfollow(userId)
-                      : store.follow(userId),
-                  child: Text(
-                      following ? S.following : S.follow),
-                ),
+                if (!isOwn)
+                  FilledButton.tonal(
+                    onPressed: () => following
+                        ? store.unfollow(userId)
+                        : store.follow(userId),
+                    child: Text(
+                        following ? S.following : S.follow),
+                  ),
               ],
             ),
           ),
@@ -154,8 +205,6 @@ class UserProfileScreen extends StatelessWidget {
                 field('bio', user.bio),
                 field('country', user.country,
                     icon: Icons.public_outlined),
-                field('educationLevel', user.educationLevel,
-                    icon: Icons.school_outlined),
                 field('school', user.school,
                     icon: Icons.business_outlined),
                 if (_canSee(me, user, 'interests') &&
@@ -176,6 +225,27 @@ class UserProfileScreen extends StatelessWidget {
               ],
             ),
           ),
+          if (!isOwn)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  icon: const Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      size: 18),
+                  label: const Text(S.messageButton),
+                  onPressed: () =>
+                      Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          ConversationScreen(
+                              otherUserId: userId),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           SectionHeader(title: S.tabPosts),
           if (posts.isEmpty)
             const Padding(
@@ -183,6 +253,143 @@ class UserProfileScreen extends StatelessWidget {
               child: Text(S.noPostsYet),
             ),
           ...posts.map((p) => PostCard(post: p)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Fallback profile for ids that aren't [AppUser]s — marketplace tutors.
+/// Shows the tutor's name, intro, subjects, and verification, plus a
+/// Message button that opens a conversation with that tutor.
+class _TutorProfile extends StatelessWidget {
+  const _TutorProfile({required this.userId, required this.tutor});
+
+  final String userId;
+  final Tutor? tutor;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = tutor;
+    if (t == null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: const EmptyState(
+          icon: Icons.person_off_outlined,
+          title: S.somethingWrong,
+        ),
+      );
+    }
+    return Scaffold(
+      appBar: AppBar(title: Text(t.name)),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        children: [
+          Row(
+            children: [
+              UserAvatar(name: t.name, radius: 36),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      t.name,
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineSmall
+                          ?.copyWith(
+                              fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 6),
+                    VerificationBadge(
+                        status: t.verification, compact: true),
+                  ],
+                ),
+              ),
+              if (t.isDemo) const DemoChip(),
+            ],
+          ),
+          if (t.intro.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(t.intro,
+                style: Theme.of(context).textTheme.bodyLarge),
+          ],
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (t.country.isNotEmpty)
+                Chip(
+                    avatar: const Icon(
+                        Icons.public_outlined, size: 16),
+                    label: Text(t.country)),
+              if (t.experience.isNotEmpty)
+                Chip(
+                    avatar: const Icon(
+                        Icons.workspace_premium_outlined,
+                        size: 16),
+                    label: Text(t.experience)),
+              Chip(
+                avatar: const Icon(Icons.star_rounded, size: 16),
+                label: Text(
+                    '${t.rating.toStringAsFixed(1)} (${t.reviewCount})'),
+              ),
+            ],
+          ),
+          if (t.subjects.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text('Subjects',
+                style: Theme.of(context)
+                    .textTheme
+                    .labelLarge
+                    ?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: t.subjects
+                  .map((s) => Chip(
+                      label: Text(s,
+                          style: const TextStyle(fontSize: 13))))
+                  .toList(),
+            ),
+          ],
+          if (t.levels.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text('Levels',
+                style: Theme.of(context)
+                    .textTheme
+                    .labelLarge
+                    ?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: t.levels
+                  .map((l) => Chip(
+                      label: Text(l,
+                          style: const TextStyle(fontSize: 13))))
+                  .toList(),
+            ),
+          ],
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              icon: const Icon(
+                  Icons.chat_bubble_outline_rounded, size: 18),
+              label: const Text(S.messageButton),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      ConversationScreen(otherUserId: userId),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

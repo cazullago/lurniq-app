@@ -7,6 +7,7 @@ import '../../models/models.dart';
 import '../../store/app_store.dart';
 import '../../widgets/ui.dart';
 import '../feed/post_card.dart';
+import '../messages/conversations_screen.dart';
 import 'edit_profile_screen.dart';
 import 'settings_screen.dart';
 import 'user_profile_screen.dart';
@@ -202,6 +203,21 @@ class ProfileTab extends StatelessWidget {
                       builder: (_) =>
                           const EditProfileScreen()),
                 ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+            child: ListTile(
+              leading: const Icon(Icons.chat_bubble_outline_rounded),
+              title: const Text(S.messages,
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: const Text(S.messagesDemoNote),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (_) => const ConversationsScreen()),
               ),
             ),
           ),

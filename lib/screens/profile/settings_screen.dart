@@ -44,6 +44,50 @@ class SettingsScreen extends StatelessWidget {
                 : me.timezoneLabel,
             onTap: () => _timezoneDialog(context, store),
           ),
+          SectionHeader(title: S.appearance),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  S.themeMode,
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelLarge
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                SegmentedButton<ThemeModeSetting>(
+                  multiSelectionEnabled: false,
+                  showSelectedIcon: false,
+                  segments: const [
+                    ButtonSegment(
+                      value: ThemeModeSetting.system,
+                      label: Text(S.themeSystem),
+                      icon:
+                          Icon(Icons.settings_suggest_outlined),
+                    ),
+                    ButtonSegment(
+                      value: ThemeModeSetting.light,
+                      label: Text(S.themeLight),
+                      icon: Icon(Icons.light_mode_outlined),
+                    ),
+                    ButtonSegment(
+                      value: ThemeModeSetting.dark,
+                      label: Text(S.themeDark),
+                      icon: Icon(Icons.dark_mode_outlined),
+                    ),
+                  ],
+                  selected: {store.themeModeSetting},
+                  onSelectionChanged: (s) =>
+                      store.setThemeMode(s.first),
+                ),
+              ],
+            ),
+          ),
+          const SectionHeader(title: 'AI'),
+          const _AiKeySection(),
           SectionHeader(title: S.notifications),
           _SwitchTile(
             icon: Icons.notifications_outlined,
@@ -367,6 +411,108 @@ class SettingsScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// AI helper API key: entered here, stored on-device via the store.
+/// A Google AI Studio (Gemini) API key works here.
+class _AiKeySection extends StatefulWidget {
+  const _AiKeySection();
+
+  @override
+  State<_AiKeySection> createState() => _AiKeySectionState();
+}
+
+class _AiKeySectionState extends State<_AiKeySection> {
+  final _ctrl = TextEditingController();
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final scheme = Theme.of(context).colorScheme;
+    final hasKey = store.aiApiKey != null &&
+        store.aiApiKey!.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (hasKey)
+          Card(
+            margin: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+            child: ListTile(
+              leading: const Icon(Icons.key_rounded),
+              title: const Text(S.aiApiKey),
+              subtitle: const Text('Key saved on this device'),
+              trailing: TextButton(
+                onPressed: () async {
+                  await store.setAiApiKey(null);
+                },
+                child: const Text('Clear'),
+              ),
+            ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: _ctrl,
+                  obscureText: true,
+                  enableSuggestions: false,
+                  autocorrect: false,
+                  decoration: const InputDecoration(
+                    labelText: S.aiApiKey,
+                    hintText: S.aiApiKeyHint,
+                    prefixIcon: Icon(Icons.key_outlined),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton.tonal(
+                    onPressed: _saving
+                        ? null
+                        : () async {
+                            final v = _ctrl.text.trim();
+                            if (v.isEmpty) {
+                              showSnack(
+                                  context, S.aiApiKeyHint);
+                              return;
+                            }
+                            setState(() => _saving = true);
+                            await store.setAiApiKey(v);
+                            if (!mounted) return;
+                            setState(() => _saving = false);
+                            _ctrl.clear();
+                            showSnack(context, S.aiApiKeySaved);
+                          },
+                    child: const Text(S.save),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: Text(
+            'A Google AI Studio (Gemini) API key works here.',
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+        ),
+      ],
     );
   }
 }

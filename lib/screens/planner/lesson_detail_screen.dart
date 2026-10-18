@@ -7,6 +7,7 @@ import '../../core/strings.dart';
 import '../../core/utils.dart';
 import '../../store/app_store.dart';
 import '../../widgets/ui.dart';
+import 'ai_sheet.dart';
 
 /// Lesson detail: original photo (full view), notes, tags, edit/delete.
 class LessonDetailScreen extends StatelessWidget {
@@ -35,6 +36,16 @@ class LessonDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(lesson.title),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.auto_awesome_outlined),
+            tooltip: S.askAi,
+            onPressed: () => AiSheet.show(
+              context,
+              title: S.askAi,
+              contextText:
+                  'Lesson: ${lesson.title}. Notes: ${lesson.notes}. Tags: ${lesson.tags.join(', ')}',
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             tooltip: S.editLesson,

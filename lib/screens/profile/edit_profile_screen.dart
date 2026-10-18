@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/constants.dart';
+import '../../core/options.dart';
 import '../../core/strings.dart';
 import '../../core/utils.dart';
 import '../../models/models.dart';
@@ -19,10 +19,10 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _name = TextEditingController();
   final _bio = TextEditingController();
-  final _country = TextEditingController();
   final _school = TextEditingController();
   final _interests = TextEditingController();
   final _goals = TextEditingController();
+  String? _country;
   String? _level;
   String? _language;
   final Map<String, String> _privacy = {};
@@ -42,7 +42,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void dispose() {
     _name.dispose();
     _bio.dispose();
-    _country.dispose();
     _school.dispose();
     _interests.dispose();
     _goals.dispose();
@@ -53,10 +52,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (_loaded) return;
     _name.text = me.displayName;
     _bio.text = me.bio;
-    _country.text = me.country;
     _school.text = me.school;
     _interests.text = me.interests.join(', ');
     _goals.text = me.learningGoals.join(', ');
+    _country = me.country.isEmpty ? null : me.country;
     _level = me.educationLevel.isEmpty ? null : me.educationLevel;
     _language = me.language;
     for (final f in _fields) {
@@ -82,7 +81,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _busy = true);
     me.displayName = _name.text.trim();
     me.bio = _bio.text.trim();
-    me.country = _country.text.trim();
+    me.country = _country ?? '';
     me.school = _school.text.trim();
     me.interests = _csv(_interests);
     me.learningGoals = _csv(_goals);
@@ -165,11 +164,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     privacy: _privacy['country']!,
                     onPrivacy: (v) => setState(
                         () => _privacy['country'] = v),
-                    child: TextField(
-                      controller: _country,
-                      decoration:
-                          const InputDecoration(
-                              hintText: S.countryHint),
+                    child: OptionField(
+                      label: '',
+                      value: _country ?? '',
+                      title: S.country,
+                      options: OptionLists.countries,
+                      icon: Icons.public_outlined,
+                      onChanged: (v) =>
+                          setState(() => _country = v),
                     ),
                   ),
                 ),
@@ -182,10 +184,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     onPrivacy: (v) => setState(() =>
                         _privacy['educationLevel'] =
                             v),
-                    child: LurniqDropdown<String>(
-                      value: _level,
-                      items:
-                          stringMenuItems(C.educationLevels),
+                    child: OptionField(
+                      label: '',
+                      value: _level ?? '',
+                      title: S.educationLevel,
+                      options:
+                          OptionLists.educationLevels,
+                      icon: Icons.school_outlined,
                       onChanged: (v) =>
                           setState(() => _level = v),
                     ),

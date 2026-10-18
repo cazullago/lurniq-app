@@ -22,7 +22,7 @@ dependencies:
   # task reminders. v19 needs core-library desugaring on android-36 builds
   # (see android/app/build.gradle.kts).
   flutter_local_notifications: ^19.5.0
-  timezone: ^0.11.2
+  timezone: ^0.10.0
 
 dev_dependencies:
   flutter_test:

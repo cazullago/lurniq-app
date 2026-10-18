@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lurniq/core/options.dart';
 import 'package:lurniq/core/strings.dart';
 import 'package:lurniq/main.dart';
+import 'package:lurniq/models/models.dart';
 import 'package:lurniq/store/app_store.dart';
 
 /// End-to-end widget tests for the critical Phase 1 flows, driven through
@@ -152,5 +154,69 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Maria Santos'), findsNothing);
     expect(find.text('Diego Fernández'), findsOneWidget);
+  });
+
+  testWidgets('settings: appearance theme toggle persists',
+      (tester) async {
+    final store = await signedInStore();
+    await tester.pumpWidget(LurniqApp(store: store));
+    await tester.pumpAndSettle();
+
+    await tapNav(tester, S.navProfile);
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+
+    expect(store.themeModeSetting, ThemeModeSetting.system);
+
+    await tester.scrollUntilVisible(
+        find.text(S.themeLight), 200);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(S.themeLight));
+    await tester.pumpAndSettle();
+
+    expect(store.themeModeSetting, ThemeModeSetting.light);
+    expect(store.currentUser!.themeMode, 'light');
+
+    // Persisted on the user record, so a reload keeps it.
+    final reloaded =
+        AppUser.fromJson(store.currentUser!.toJson());
+    expect(reloaded.themeMode, 'light');
+  });
+
+  testWidgets('edit profile: education level saves via edit flow',
+      (tester) async {
+    final store = await signedInStore();
+    await tester.pumpWidget(LurniqApp(store: store));
+    await tester.pumpAndSettle();
+
+    await tapNav(tester, S.navProfile);
+    await tester.tap(find.text(S.editProfile));
+    await tester.pumpAndSettle();
+
+    // Country is the first OptionField, education level the second.
+    final fields = find.byType(OptionField);
+    expect(fields, findsNWidgets(2));
+    await tester.ensureVisible(fields.at(1));
+    await tester.pumpAndSettle();
+    await tester.tap(fields.at(1));
+    await tester.pumpAndSettle();
+
+    // Option sheet is open; pick a value (also verifies the
+    // "Other…" free-text row exists on this list).
+    expect(find.text('Other…'), findsOneWidget);
+    await tester.tap(find.text('College'));
+    await tester.pumpAndSettle();
+
+    // Selection is reflected in the field before saving.
+    expect(find.text('College'), findsOneWidget);
+    expect(store.currentUser!.educationLevel, isEmpty);
+
+    // Save from the app bar and confirm the store persisted it.
+    await tester.tap(find.descendant(
+      of: find.byType(AppBar),
+      matching: find.text(S.save),
+    ));
+    await tester.pumpAndSettle();
+    expect(store.currentUser!.educationLevel, 'College');
   });
 }

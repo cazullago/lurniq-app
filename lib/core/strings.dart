@@ -498,7 +498,6 @@ class S {
   static const doneFolder = 'Done';
   static const doneFolderSubtitle =
       'Finished tasks live here as your performance record.';
-  static const markDone = 'Mark as done';
   static const reopenTask = 'Move back to to-do';
   static const logGrade = 'Log grade';
   static const gradeScoreHint = 'Score (e.g. 95/100 or A)';
@@ -522,7 +521,6 @@ class S {
   static const newMessage = 'New message';
   static const typeMessage = 'Type a message…';
   static const messageButton = 'Message';
-  static const blockUser = 'Block';
   static const unblockUser = 'Unblock';
   static const reportUser = 'Report';
   static const noConversations = 'No conversations yet';
@@ -540,7 +538,6 @@ class S {
   static const courseTitle = 'Course title';
   static const courseDescription = 'Description';
   static const addLesson = 'Add lesson';
-  static const lessonTitle = 'Lesson title';
   static const lessonKind = 'Lesson format';
   static const lessonVideo = 'Video';
   static const lessonSlides = 'Slides / text';
@@ -549,7 +546,6 @@ class S {
   static const enroll = 'Enroll';
   static const enrolled = 'Enrolled';
   static const continueCourse = 'Continue';
-  static const publish = 'Publish';
   static const unpublish = 'Unpublish';
   static const published = 'Published';
   static const draft = 'Draft';
@@ -580,7 +576,6 @@ class S {
   static const pastSessions = 'Past sessions';
   static const leaveReview = 'Leave a review';
   static const reviewHint = 'How was the session?';
-  static const reviewThanks = 'Thanks for your review!';
   static const joinMeeting = 'Join meeting';
   static const bookingReminderTitle = 'Tutoring session soon';
   static const bookingReminderBody = 'Your 1v1 session starts in 15 minutes.';
@@ -615,4 +610,33 @@ class S {
   static const answersHiddenNote =
       'Answers stay hidden until the timer ends.';
   static const openMeetingLink = 'Open meeting link';
+
+  // ── v2: Lurniq Plus subscription ───────────────────────
+  static const subscription = 'Subscription';
+  static const plusTitle = 'Lurniq Plus';
+  static const plusTagline =
+      'Supercharge your studying with unlimited AI help.';
+  static const freeTier = 'Free';
+  static const plusMonthly = 'Plus Monthly';
+  static const plusYearly = 'Plus Yearly';
+  static const bestValue = 'Best value';
+  static const currentPlan = 'Current plan';
+  static const subscribe = 'Subscribe';
+  static const comingSoon = 'Coming soon';
+  static const comingSoonNote =
+      'Subscriptions aren\u2019t open yet — Google Play Billing is coming. Tapping subscribe charges nothing today.';
+  static const unlimitedAi = 'Unlimited AI study help';
+  static const noKeyNeeded = 'No API key needed';
+  static const earlyAccess = 'Early access to new features';
+  static const supporterBadge = 'Supporter badge on your profile';
+  static const everythingInFree = 'Everything in the free app';
+  static const dailyAiQuotaNote = 'free demo AI questions per day';
+  static const quotaExhaustedTitle = 'Daily free AI limit reached';
+  static const quotaExhaustedBody =
+      'You\u2019ve used today\u2019s free AI questions. Add your own API key in Settings for unlimited answers, or get Lurniq Plus.';
+  static const viewPlus = 'See Lurniq Plus';
+  static const perMonth = 'month';
+  static const perYear = 'year';
+  static const approxRateNote =
+      'USD equivalents are approximate (about ₱58 = $1).';
 }
