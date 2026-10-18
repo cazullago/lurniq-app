@@ -1,0 +1,137 @@
+# Lurniq — A smarter way to learn.
+
+A global student learning & study app (native Flutter, Android-first):
+
+- **Tutor** — open tutoring marketplace directory (Phase 1: seeded demo tutors, browse + filter; registration/courses/bookings in Phase 3)
+- **Newsfeed** — student learning community (questions, discussions, notes, resources, study groups)
+- **Add Post** — composer with preview, study-group invitations, resource sharing
+- **Planner** — subject folders, lesson photo capture, task manager with calendar/weekly/list views
+- **Profile** — identity, privacy controls, activity, messaging-ready (Phase 4), settings
+
+> **Demo mode:** Phase 1 runs fully on-device. Accounts, posts, lessons, and
+> tasks live in the app's private storage — no account, server, or payment
+> provider is involved yet. Anything seeded is badged **DEMO** in the UI and
+> can be cleared from Settings → Reset demo content.
+
+## Project status
+
+| Phase | Scope | Status |
+|---|---|---|
+| 1 — Core app | Auth, 5 tabs, newsfeed, add post, planner (folders + lesson capture + tasks) | ✅ shipped as debug APK |
+| 2 — Learning tools | OCR text extraction, AI study help, task-from-photo, push reminders | 🔲 planned |
+| 3 — Tutor marketplace | Tutor registration, recorded courses, enrollment, reviews | 🔲 planned |
+| 4 — Paid services | Live tutoring bookings, group study upgrades, messaging, payments + 15% commission, payouts/refunds | 🔲 planned |
+| 5 — Global + admin | i18n, currency conversion, full admin tooling, analytics | 🔲 planned |
+
+## Repository layout
+
+```
+lib/
+  main.dart            # crash-proof bootstrap, 5-tab nav, auth gate
+  core/                # constants, strings (translation-ready), theme, utils, JSON store
+  models/              # JSON-serializable data models (Firestore-compatible schema)
+  data/seed.dart       # demo tutors / posts / folders (all flagged isDemo)
+  store/app_store.dart # single ChangeNotifier source of truth + on-device persistence
+  screens/             # auth, tutor, feed, compose, planner, profile, admin
+  widgets/ui.dart      # shared widgets (avatar, cards, chips, empty states)
+test/
+  store_test.dart      # store-level tests for critical flows
+  widget_test.dart     # end-to-end widget tests (auth, compose, planner, tutor)
+android/               # applicationId com.lurniq.app, release signing config
+docs/                  # privacy-policy-template.md
+PLAY_RELEASE_CHECKLIST.md
+```
+
+## Build
+
+Cloud build (GitHub Actions):
+
+1. Push to `main` → workflow `.github/workflows/build-apk.yml` runs:
+   `flutter pub get` → `flutter analyze --no-fatal-infos` → `flutter test` →
+   debug APK + release AAB artifacts.
+2. Download the APK artifact and publish a GitHub release for testers.
+
+Local (analysis + tests only — APK builds run in CI):
+
+```bash
+flutter pub get
+flutter analyze --no-fatal-infos
+flutter test
+```
+
+### Versioning
+
+`pubspec.yaml` `version: 1.0.0+1` → `versionName 1.0.0`, `versionCode 1`.
+Bump `+N` (versionCode) on **every** Play release; bump the name for
+user-visible releases. Never reuse a versionCode.
+
+### Release signing (Google Play path)
+
+The upload keystore is **never** committed. Two inputs are supported
+(`android/app/build.gradle.kts`):
+
+1. `android/keystore.properties` (local, git-ignored):
+   `storeFile`, `storePassword`, `keyAlias`, `keyPassword`
+2. CI secrets: `LURNIQ_KEYSTORE_BASE64`, `LURNIQ_STORE_PASSWORD`,
+   `LURNIQ_KEY_ALIAS`, `LURNIQ_KEY_PASSWORD` (see workflow)
+
+Without either, release builds fall back to **debug signing** — fine for
+testing, **not** for Play upload. Full steps:
+[PLAY_RELEASE_CHECKLIST.md](PLAY_RELEASE_CHECKLIST.md).
+
+## Admin dashboard
+
+Triple-tap the **Profile** tab icon → admin login. Passcode: `482917`
+(documented here, repo-private — never shown inside the app UI).
+Change it before any production use (`lib/core/constants.dart` →
+`C.adminPasscode`).
+
+Behind the gate: content reports, announcements, commission setting,
+tutor-interest list, audit log, and Phase 5 placeholders. **Every admin
+action is written to the audit log.**
+
+> ⚠️ On this demo build the dashboard is passcode-gated. Production
+> deployments **must** enforce administrator roles server-side
+> (Firebase custom claims or equivalent) — a hidden gesture + passcode
+> alone is not real protection.
+
+## Integration points (Phases 2–5)
+
+Marked in code with `[BACKEND]`, `[PAYMENTS]`, `[AI]`, `[PUSH]`:
+
+| Need | Phase | What's required (user-side) |
+|---|---|---|
+| Real accounts + cloud sync | 2/5 | Firebase project (Auth + Firestore in `asia-southeast1` or nearest); replace `JsonBox` persistence in `AppStore.load`/`_saveNow`; no `firebase_*` deps are bundled yet |
+| OCR text extraction | 2 | On-device ML Kit (`google_mlkit_text_recognition`) or a cloud OCR API key; `Lesson` model already reserves the field |
+| AI study assistant | 2 | AI provider API key (OpenAI-compatible); never present demo text as AI output |
+| Push reminders | 2 | `flutter_local_notifications` + exact-alarm permission rationale; reminder times are already stored |
+| Payments + payouts | 4 | Payment provider account (e.g. Stripe/PayMongo), payout rules, tax handling; commission math already centralized (`commissionRate`, admin-adjustable, audit-logged) |
+| Messaging | 4 | Moderation pipeline first; Phase 1 ships **no** DMs by design |
+| i18n | 5 | All strings live in `lib/core/strings.dart` — add a locale catalog |
+
+**Rules that stay true in every phase:** no fake buttons (every control does
+something real); no simulated money shown as real; verification labels are
+always honest (`unverified` / `ID verified` / `credential checked` with
+plain-language explanations); minors get restricted messaging and no precise
+home addresses in study-group locations.
+
+## Performance notes
+
+- All feeds/lists use lazy builders (`ListView.builder`, `ReorderableListView.builder`).
+- Post/lesson images are downscaled at capture (`maxWidth 1600`, quality 85)
+  and decoded with capped `cacheWidth` in lists — feeds never hold
+  full-resolution bitmaps.
+- Persistence writes are debounced (500 ms) and go through temp-file + rename.
+- Debug APKs are inherently slower (no tree-shaking, checked mode). The
+  **release AAB** artifact is the performance reference; compare on that
+  before judging speed.
+
+## Privacy & safety
+
+- Camera/photos permission is requested **at point of need** with a
+  plain-language rationale; manifest declares no location, no contacts.
+- Users choose per-field profile privacy (public / followers / private);
+  blocking hides a user's posts and comments from the blocker.
+- Study groups never ask for precise home addresses (in-app safety copy).
+- Academic-integrity microcopy is built into the question composer and
+  question threads (explanations over copy-paste answers).

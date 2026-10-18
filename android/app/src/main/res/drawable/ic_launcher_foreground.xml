@@ -1,0 +1,46 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="192"
+    android:viewportHeight="192">
+    <!-- Lurniq mark: open book + amber spark. 100% original artwork. -->
+    <path
+        android:fillColor="#0F766E"
+        android:pathData="M96,66 C84,57 68,54 54,57 L54,128 C68,125 84,128 96,137 C108,128 124,125 138,128 L138,57 C124,54 108,57 96,66 Z" />
+    <path
+        android:strokeColor="#FFF7ED"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:pathData="M96,66 L96,137" />
+    <path
+        android:strokeColor="#FFF7ED"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.85"
+        android:pathData="M64,76 C74,74 84,76 91,81" />
+    <path
+        android:strokeColor="#FFF7ED"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.85"
+        android:pathData="M64,94 C74,92 84,94 91,99" />
+    <path
+        android:strokeColor="#FFF7ED"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.85"
+        android:pathData="M101,81 C108,76 118,74 128,76" />
+    <path
+        android:strokeColor="#FFF7ED"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.85"
+        android:pathData="M101,99 C108,94 118,92 128,94" />
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M138,30 L142.5,43.5 L156,48 L142.5,52.5 L138,66 L133.5,52.5 L120,48 L133.5,43.5 Z" />
+    <path
+        android:fillColor="#F59E0B"
+        android:fillAlpha="0.9"
+        android:pathData="M52,143 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+</vector>

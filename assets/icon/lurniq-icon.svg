@@ -1,0 +1,35 @@
+<!-- Lurniq app icon — 100% original artwork.
+     Warm cream rounded square with a deep-teal open book and an amber spark.
+     The spark stands for the "IQ" in Lurniq: a smarter way to learn. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect x="0" y="0" width="192" height="192" rx="44" fill="#FFF7ED"/>
+  <!-- open book -->
+  <path d="M96 66
+           C84 57 68 54 54 57
+           L54 128
+           C68 125 84 128 96 137
+           C108 128 124 125 138 128
+           L138 57
+           C124 54 108 57 96 66 Z"
+        fill="#0F766E"/>
+  <path d="M96 66 L96 137" stroke="#FFF7ED" stroke-width="6" stroke-linecap="round"/>
+  <path d="M64 76 C74 74 84 76 91 81" stroke="#FFF7ED" stroke-width="5"
+        stroke-linecap="round" fill="none" opacity="0.85"/>
+  <path d="M64 94 C74 92 84 94 91 99" stroke="#FFF7ED" stroke-width="5"
+        stroke-linecap="round" fill="none" opacity="0.85"/>
+  <path d="M101 81 C108 76 118 74 128 76" stroke="#FFF7ED" stroke-width="5"
+        stroke-linecap="round" fill="none" opacity="0.85"/>
+  <path d="M101 99 C108 94 118 92 128 94" stroke="#FFF7ED" stroke-width="5"
+        stroke-linecap="round" fill="none" opacity="0.85"/>
+  <!-- amber spark -->
+  <path d="M138 30
+           L142.5 43.5
+           L156 48
+           L142.5 52.5
+           L138 66
+           L133.5 52.5
+           L120 48
+           L133.5 43.5 Z"
+        fill="#F59E0B"/>
+  <circle cx="52" cy="150" r="7" fill="#F59E0B" opacity="0.9"/>
+</svg>
