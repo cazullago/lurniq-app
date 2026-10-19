@@ -9,6 +9,7 @@ import '../../core/strings.dart';
 import '../../core/utils.dart';
 import '../../models/models.dart';
 import '../../store/app_store.dart';
+import '../legal/legal_screens.dart';
 
 /// Create/edit a course: title, description, subject, level, price,
 /// thumbnail (image_picker) and a lesson editor (add/edit/delete lessons
@@ -172,6 +173,10 @@ class _CourseFormScreenState extends State<CourseFormScreen> {
       isDemo: false,
     );
     if (existing == null) {
+      if (!await ensureTutorAgreement(context)) {
+        setState(() => _saving = false);
+        return;
+      }
       await _store.createCourse(course);
     } else {
       await _store.updateCourse(course);

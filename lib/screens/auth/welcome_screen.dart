@@ -5,6 +5,7 @@ import '../../core/strings.dart';
 import '../../core/utils.dart';
 import '../../store/app_store.dart';
 import '../../widgets/ui.dart';
+import '../legal/legal_screens.dart';
 
 /// Entry screen for signed-out users. Clearly labeled demo mode: accounts
 /// live on this device only ([BACKEND] wires Firebase Auth later).
@@ -130,6 +131,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _username = TextEditingController();
   final _email = TextEditingController();
   bool _busy = false;
+  bool _tosOk = false;
+  bool _ppOk = false;
 
   @override
   void dispose() {
@@ -140,12 +143,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<void> _submit() async {
+    if (!_tosOk || !_ppOk) {
+      showSnack(context, S.mustAcceptLegal);
+      return;
+    }
     setState(() => _busy = true);
     try {
       await context.read<AppStore>().signUp(
             displayName: _name.text,
             username: _username.text,
             email: _email.text,
+            tosAccepted: _tosOk,
+            ppAccepted: _ppOk,
           );
       if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
     } on StoreException catch (e) {
@@ -153,6 +162,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  void _openDoc(Widget screen) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   }
 
   @override
@@ -201,9 +214,24 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 labelText: S.emailOptional,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            _LegalCheck(
+              value: _tosOk,
+              onChanged: (v) => setState(() => _tosOk = v ?? false),
+              label: S.tosAccept,
+              docLabel: S.termsOfService,
+              onOpenDoc: () => _openDoc(const TosScreen()),
+            ),
+            _LegalCheck(
+              value: _ppOk,
+              onChanged: (v) => setState(() => _ppOk = v ?? false),
+              label: S.ppAccept,
+              docLabel: S.privacyPolicy,
+              onOpenDoc: () => _openDoc(const PrivacyScreen()),
+            ),
+            const SizedBox(height: 8),
             FilledButton(
-              onPressed: _busy ? null : _submit,
+              onPressed: (_busy || !_tosOk || !_ppOk) ? null : _submit,
               child: _busy
                   ? const SizedBox(
                       width: 20,
@@ -282,6 +310,63 @@ class _SignInScreenState extends State<SignInScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Checkbox row for legal acceptance with a tappable "Read" link that opens
+/// the full document. Sign-up stays disabled until all boxes are checked.
+class _LegalCheck extends StatelessWidget {
+  const _LegalCheck({
+    required this.value,
+    required this.onChanged,
+    required this.label,
+    required this.docLabel,
+    required this.onOpenDoc,
+  });
+
+  final bool value;
+  final ValueChanged<bool?> onChanged;
+  final String label;
+  final String docLabel;
+  final VoidCallback onOpenDoc;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Checkbox(value: value, onChanged: onChanged),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(label),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize:
+                        MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: onOpenDoc,
+                  child: Text(
+                    '${S.readDocument} $docLabel',
+                    style: TextStyle(
+                      color: scheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -5,9 +5,11 @@ import 'package:flutter/foundation.dart';
 
 import '../core/constants.dart';
 import '../core/json_store.dart';
+import '../core/strings.dart';
 import '../core/utils.dart';
 import '../data/course_seed.dart';
 import '../data/seed.dart';
+import '../legal/legal_versions.dart';
 import '../models/models.dart';
 
 /// Single source of truth for the whole app (Phase 1: on-device JSON store).
@@ -235,6 +237,8 @@ class AppStore extends ChangeNotifier {
     required String displayName,
     required String username,
     String? email,
+    required bool tosAccepted,
+    required bool ppAccepted,
   }) async {
     final cleanName = displayName.trim();
     final cleanUser = username.trim().toLowerCase();
@@ -245,11 +249,19 @@ class AppStore extends ChangeNotifier {
     if (users.any((u) => u.username.toLowerCase() == cleanUser)) {
       throw StoreException('That username is taken. Try another one.');
     }
+    if (!tosAccepted || !ppAccepted) {
+      throw StoreException(S.mustAcceptLegal);
+    }
+    final now = DateTime.now();
     final user = AppUser(
       id: newId(),
       displayName: cleanName,
       username: cleanUser,
       email: email?.trim().isEmpty == true ? null : email?.trim(),
+      tosVersion: LegalVersions.tos,
+      tosAcceptedAt: now,
+      ppVersion: LegalVersions.privacyPolicy,
+      ppAcceptedAt: now,
     );
     users.add(user);
     folders.addAll(SeedData.defaultFolders(user.id));
@@ -1304,6 +1316,7 @@ class AppStore extends ChangeNotifier {
   }
 
   Future<Course> createCourse(Course draft) async {
+    _requireTutorAgreement();
     courses.add(draft);
     _mutate();
     return draft;
@@ -1493,6 +1506,7 @@ class AppStore extends ChangeNotifier {
   }
 
   Future<LiveSession> createLiveSession(LiveSession draft) async {
+    _requireTutorAgreement();
     liveSessions.add(draft);
     _mutate();
     return draft;
@@ -1613,6 +1627,29 @@ class AppStore extends ChangeNotifier {
 
 /// Theme preference. Stored on the user as a string for JSON compatibility.
 enum ThemeModeSetting { system, light, dark }
+
+extension LegalApi on AppStore {
+  /// True when the current user accepted the current Tutor Agreement text.
+  /// Listing a course or live session requires this.
+  bool get tutorAgreementAccepted {
+    final v = currentUser?.tutorAgreementVersion ?? '';
+    return v.isNotEmpty && v == LegalVersions.tutorAgreement;
+  }
+
+  Future<void> acceptTutorAgreement() async {
+    final u = currentUser;
+    if (u == null) return;
+    u.tutorAgreementVersion = LegalVersions.tutorAgreement;
+    u.tutorAgreementAt = DateTime.now();
+    await updateProfile(u);
+  }
+
+  void _requireTutorAgreement() {
+    if (!tutorAgreementAccepted) {
+      throw StoreException(S.agreementRequired);
+    }
+  }
+}
 
 extension SubscriptionApi on AppStore {
   /// Free tier: 5 demo-AI questions/day unless the user added their own key.

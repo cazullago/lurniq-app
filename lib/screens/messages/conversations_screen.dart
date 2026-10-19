@@ -36,8 +36,7 @@ class ConversationsScreen extends StatelessWidget {
 
   Future<void> _delete(
       BuildContext context, AppStore store, Conversation c, String peerName) async {
-    // Local labels: strings.dart currently defines `blockUser` twice, so we
-    // don't reference S.blockUser / S.deleteConversation here.
+    // No dedicated S.deleteConversation key exists, so local labels are used.
     final ok = await confirmDialog(
       context,
       title: 'Delete conversation?',
@@ -112,7 +111,7 @@ class ConversationsScreen extends StatelessWidget {
                   )
                 : ListView.separated(
                     itemCount: conversations.length,
-                    separatorBuilder: (_, __) =>
+                    separatorBuilder: (_, _) =>
                         const Divider(height: 1, indent: 72),
                     itemBuilder: (context, i) {
                       final c = conversations[i];

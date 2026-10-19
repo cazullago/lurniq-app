@@ -103,9 +103,10 @@ Marked in code with `[BACKEND]`, `[PAYMENTS]`, `[AI]`, `[PUSH]`:
 |---|---|---|
 | Real accounts + cloud sync | 2/5 | Firebase project (Auth + Firestore in `asia-southeast1` or nearest); replace `JsonBox` persistence in `AppStore.load`/`_saveNow`; no `firebase_*` deps are bundled yet |
 | OCR text extraction | 2 | On-device ML Kit (`google_mlkit_text_recognition`) or a cloud OCR API key; `Lesson` model already reserves the field |
-| AI study assistant | 2 | AI provider API key (OpenAI-compatible); never present demo text as AI output |
+| AI study assistant | 2 | AI provider API key — a Google AI Studio (Gemini) key works via the OpenAI-compatible endpoint; never present demo text as AI output |
 | Push reminders | 2 | `flutter_local_notifications` + exact-alarm permission rationale; reminder times are already stored |
 | Payments + payouts | 4 | Payment provider account (e.g. Stripe/PayMongo), payout rules, tax handling; commission math already centralized (`commissionRate`, admin-adjustable, audit-logged) |
+| Lurniq Plus billing | 4 | Google Play Billing; entitlement model already in place — see below |
 | Messaging | 4 | Moderation pipeline first; Phase 1 ships **no** DMs by design |
 | i18n | 5 | All strings live in `lib/core/strings.dart` — add a locale catalog |
 
@@ -114,6 +115,27 @@ something real); no simulated money shown as real; verification labels are
 always honest (`unverified` / `ID verified` / `credential checked` with
 plain-language explanations); minors get restricted messaging and no precise
 home addresses in study-group locations.
+
+### Lurniq Plus (subscription) — Play Billing wiring
+
+Tiers: **Free** (full app; AI via user's own key or 5 demo questions/day),
+**Plus ₱149/month** and **Plus ₱999/year** (unlimited AI, no key needed
+once server-side, early access, supporter badge). Subscribe buttons are
+marked **"Coming soon"** and move no money until Google Play Billing is
+wired (needs the user's Play Console + payments phase).
+
+The entitlement model is already structured so billing plugs in without
+refactoring:
+
+- `Entitlement` (`lib/models/models.dart`): `plan` (`free`/`plus`),
+  `source` (`none`/`demo`/`play_billing`), `plusExpiresAt`; `isPlus`
+  honors expiry.
+- `AppStore.setEntitlement()` — the **single** method Play Billing calls
+  after a purchase is verified. No call site changes needed.
+- `AppStore.isPlus` / `aiUnlimited` / `demoAiQuotaRemaining()` /
+  `consumeDemoAiQuota()` — the AI helper already gates on these.
+- Prices: `PlusCatalog` (PHP base, approximate USD display honoring the
+  user's currency preference).
 
 ## Performance notes
 
@@ -133,5 +155,32 @@ home addresses in study-group locations.
 - Users choose per-field profile privacy (public / followers / private);
   blocking hides a user's posts and comments from the blocker.
 - Study groups never ask for precise home addresses (in-app safety copy).
+
+## Legal (drafts — not legal advice)
+
+The in-app **Terms of Service**, **Privacy Policy**, and **Tutor
+Agreement** (`lib/screens/legal/legal_screens.dart`) are good-faith
+**drafts for review, not legal advice and not final**. Every surface
+carries that banner. Key points of the drafts:
+
+- Lurniq is a marketplace; tutors are independent, not employees.
+- 15% platform commission on paid courses/bookings, shown before payment.
+- Tutor payouts: 7-day clearing, \$20 minimum, via payment provider.
+- Refund windows: >24h full, <24h 50% (student cancel); tutor cancel =
+  full refund.
+- Tutors must be 18+; students 13+ with parental consent for paid
+  features; adult–minor safeguards throughout.
+- Tutors handle their own taxes.
+
+Enforcement in code: sign-up requires ToS + Privacy Policy acceptance
+(version + timestamp stored on the account); creating a course or live
+session requires accepting the current Tutor Agreement
+(`AppStore.tutorAgreementAccepted`, version-gated). Bumping a version in
+`lib/legal/legal_versions.dart` forces re-acceptance.
+
+**Do not accept real payments before the lawyer-review gate in
+[LEGAL_CHECKLIST.md](LEGAL_CHECKLIST.md) is cleared** (BIR registration,
+Data Privacy Act/NPC, Play Data Safety form, Stripe Connect/payouts,
+tutor age verification).
 - Academic-integrity microcopy is built into the question composer and
   question threads (explanations over copy-paste answers).

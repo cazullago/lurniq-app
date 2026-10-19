@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/constants.dart';
 import '../../core/strings.dart';
+import '../../core/theme.dart';
 import '../../core/utils.dart';
 import '../../models/models.dart';
 import '../../store/app_store.dart';
@@ -30,17 +31,31 @@ class PostCard extends StatelessWidget {
     final isAuthor = me != null && post.authorId == me.id;
 
     return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(
-              builder: (_) => PostDetailScreen(postId: post.id)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      elevation: 3,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Warm sunrise edge — the card's signature accent.
+          Container(
+            height: 5,
+            decoration: BoxDecoration(
+              gradient: AppTheme.heroGradient(
+                  Theme.of(context).brightness),
+            ),
+          ),
+          InkWell(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                  builder: (_) =>
+                      PostDetailScreen(postId: post.id)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
               Row(
                 children: [
                   UserAvatar(
@@ -192,7 +207,9 @@ class PostCard extends StatelessWidget {
               ),
             ],
           ),
+          ),
         ),
+        ],
       ),
     );
   }

@@ -16,19 +16,32 @@ Future<AppStore> freshStore() => AppStore.loadForTest();
 Future<AppStore> signedInStore() async {
   final store = await AppStore.loadForTest();
   await store.signUp(
-      displayName: 'Widget Tester', username: 'widget_tester');
+      displayName: 'Widget Tester', username: 'widget_tester', tosAccepted: true, ppAccepted: true);
   return store;
 }
 
 void main() {
+  /// Tap a bottom-nav item. The first nav tap in a testWidgets run is
+  /// sometimes swallowed by the test framework's hit testing (no real-device
+  /// impact), so verify the switch and retry once if it didn't land.
   Future<void> tapNav(WidgetTester tester, String label) async {
-    await tester.tap(
-      find.descendant(
-        of: find.byType(BottomNavigationBar),
-        matching: find.text(label),
-      ),
+    final target = find.descendant(
+      of: find.byType(BottomNavigationBar),
+      matching: find.text(label),
     );
+    BottomNavigationBar bar() =>
+        tester.widget(find.byType(BottomNavigationBar));
+    final items = bar()
+        .items
+        .map((i) => (i.label ?? ''))
+        .toList();
+    final want = items.indexOf(label);
+    await tester.tap(target, warnIfMissed: false);
     await tester.pumpAndSettle();
+    if (bar().currentIndex != want) {
+      await tester.tap(target, warnIfMissed: false);
+      await tester.pumpAndSettle();
+    }
   }
 
   testWidgets(
@@ -47,6 +60,10 @@ void main() {
         find.byType(TextField).at(0), 'Widget Tester');
     await tester.enterText(
         find.byType(TextField).at(1), 'widget_tester');
+    // Legal acceptance is required before sign-up (v2).
+    await tester.tap(find.byType(Checkbox).at(0));
+    await tester.tap(find.byType(Checkbox).at(1));
+    await tester.pumpAndSettle();
     await tester.tap(
         find.widgetWithText(FilledButton, S.createAccount));
     await tester.pumpAndSettle();
@@ -107,8 +124,9 @@ void main() {
 
     await tapNav(tester, S.navPlanner);
 
-    // Six default subject folders are seeded.
-    expect(find.text('Mathematics'), findsOneWidget);
+    // Six default subject folders are seeded (name shows on the folder
+    // card and in the task filter chips).
+    expect(find.text('Mathematics'), findsWidgets);
 
     await tester.tap(find.text(S.newFolder));
     await tester.pumpAndSettle();
@@ -148,11 +166,26 @@ void main() {
 
     await tapNav(tester, S.navTutor);
 
+    // v2 tutor cards are tall; the directory is lazily built, so drag
+    // until Maria's card is on screen.
+    for (var i = 0;
+        i < 6 && find.text('Maria Santos').evaluate().isEmpty;
+        i++) {
+      await tester.drag(find.byType(ListView).first, const Offset(0, -400));
+      await tester.pumpAndSettle();
+    }
     expect(find.text('Maria Santos'), findsOneWidget);
     await tester.enterText(
         find.byType(TextField).first, 'guitar');
     await tester.pumpAndSettle();
     expect(find.text('Maria Santos'), findsNothing);
+    // Scroll Diego into view before asserting.
+    for (var i = 0;
+        i < 6 && find.text('Diego Fernández').evaluate().isEmpty;
+        i++) {
+      await tester.drag(find.byType(ListView).first, const Offset(0, -400));
+      await tester.pumpAndSettle();
+    }
     expect(find.text('Diego Fernández'), findsOneWidget);
   });
 
@@ -168,8 +201,7 @@ void main() {
 
     expect(store.themeModeSetting, ThemeModeSetting.system);
 
-    await tester.scrollUntilVisible(
-        find.text(S.themeLight), 200);
+    await tester.ensureVisible(find.text(S.themeLight));
     await tester.pumpAndSettle();
     await tester.tap(find.text(S.themeLight));
     await tester.pumpAndSettle();

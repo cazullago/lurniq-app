@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/strings.dart';
+import '../../core/theme.dart';
 import '../../core/utils.dart';
 import '../../models/models.dart';
 import '../../store/app_store.dart';
+import '../../widgets/illustrations.dart' as ill;
 import '../../widgets/ui.dart';
 import '../feed/post_card.dart';
 import '../messages/conversation_screen.dart';
@@ -120,14 +122,30 @@ class UserProfileScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          Container(
+            decoration: BoxDecoration(
+              gradient: AppTheme.washGradient(
+                  Theme.of(context).brightness),
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(28),
+              ),
+            ),
+            padding:
+                const EdgeInsets.fromLTRB(16, 16, 16, 16),
             child: Row(
               children: [
-                UserAvatar(
-                    name: user.displayName,
-                    avatarPath: user.avatarPath,
-                    radius: 36),
+                Container(
+                  padding: const EdgeInsets.all(3.5),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: AppTheme.heroGradient(
+                        Theme.of(context).brightness),
+                  ),
+                  child: UserAvatar(
+                      name: user.displayName,
+                      avatarPath: user.avatarPath,
+                      radius: 36),
+                ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
@@ -149,24 +167,34 @@ class UserProfileScreen extends StatelessWidget {
                       if (showEducation)
                         Padding(
                           padding:
-                              const EdgeInsets.only(top: 6),
+                              const EdgeInsets.only(top: 8),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
+                            padding:
+                                const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 7),
                             decoration: BoxDecoration(
-                              color: scheme.primaryContainer,
+                              color:
+                                  scheme.tertiaryContainer,
                               borderRadius:
-                                  BorderRadius.circular(10),
+                                  BorderRadius.circular(
+                                      12),
+                              border: Border.all(
+                                color: scheme.tertiary
+                                    .withValues(
+                                        alpha: 0.45),
+                              ),
                             ),
                             child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                              mainAxisSize:
+                                  MainAxisSize.min,
                               children: [
                                 Icon(
-                                    Icons.school_outlined,
-                                    size: 15,
+                                    Icons.school_rounded,
+                                    size: 16,
                                     color: scheme
-                                        .onPrimaryContainer),
-                                const SizedBox(width: 5),
+                                        .onTertiaryContainer),
+                                const SizedBox(width: 6),
                                 Flexible(
                                   child: Text(
                                     user.educationLevel,
@@ -175,7 +203,7 @@ class UserProfileScreen extends StatelessWidget {
                                           FontWeight.w800,
                                       fontSize: 13,
                                       color: scheme
-                                          .onPrimaryContainer,
+                                          .onTertiaryContainer,
                                     ),
                                   ),
                                 ),
@@ -248,9 +276,9 @@ class UserProfileScreen extends StatelessWidget {
             ),
           SectionHeader(title: S.tabPosts),
           if (posts.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text(S.noPostsYet),
+            const ill.EmptyState(
+              illustration: ill.IllustrationKind.chat,
+              title: S.noPostsYet,
             ),
           ...posts.map((p) => PostCard(post: p)),
         ],
@@ -274,8 +302,8 @@ class _TutorProfile extends StatelessWidget {
     if (t == null) {
       return Scaffold(
         appBar: AppBar(),
-        body: const EmptyState(
-          icon: Icons.person_off_outlined,
+        body: const ill.EmptyState(
+          illustration: ill.IllustrationKind.compass,
           title: S.somethingWrong,
         ),
       );
@@ -287,7 +315,16 @@ class _TutorProfile extends StatelessWidget {
         children: [
           Row(
             children: [
-              UserAvatar(name: t.name, radius: 36),
+              Container(
+                padding: const EdgeInsets.all(3.5),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: AppTheme.heroGradient(
+                      Theme.of(context).brightness),
+                ),
+                child:
+                    UserAvatar(name: t.name, radius: 36),
+              ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/strings.dart';
+import '../../core/theme.dart';
 import '../../core/utils.dart';
 import '../../models/models.dart';
 import '../../store/app_store.dart';
+import '../../widgets/illustrations.dart' as ill;
 import '../../widgets/ui.dart';
 import '../feed/post_card.dart';
 import '../messages/conversations_screen.dart';
@@ -51,36 +53,55 @@ class ProfileTab extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          Container(
+            decoration: BoxDecoration(
+              gradient: AppTheme.washGradient(
+                  Theme.of(context).brightness),
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(28),
+              ),
+            ),
+            padding:
+                const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: Row(
               children: [
-                InkWell(
-                  borderRadius: BorderRadius.circular(40),
-                  onTap: () =>
-                      _changeAvatar(context, store),
-                  child: Stack(
-                    children: [
-                      UserAvatar(
-                          name: me.displayName,
-                          avatarPath: me.avatarPath,
-                          radius: 36),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(5),
-                          decoration: BoxDecoration(
-                            color: scheme.primary,
-                            shape: BoxShape.circle,
+                Container(
+                  padding: const EdgeInsets.all(3.5),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: AppTheme.heroGradient(
+                        Theme.of(context).brightness),
+                  ),
+                  child: InkWell(
+                    borderRadius:
+                        BorderRadius.circular(40),
+                    onTap: () =>
+                        _changeAvatar(context, store),
+                    child: Stack(
+                      children: [
+                        UserAvatar(
+                            name: me.displayName,
+                            avatarPath: me.avatarPath,
+                            radius: 36),
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            padding:
+                                const EdgeInsets.all(5),
+                            decoration: BoxDecoration(
+                              color: scheme.primary,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                                Icons
+                                    .photo_camera_outlined,
+                                size: 14,
+                                color: Colors.white),
                           ),
-                          child: const Icon(
-                              Icons.photo_camera_outlined,
-                              size: 14,
-                              color: Colors.white),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -147,12 +168,39 @@ class ProfileTab extends StatelessWidget {
                           size: 16),
                       label: Text(me.country)),
                 if (me.educationLevel.isNotEmpty)
-                  Chip(
-                      avatar: const Icon(
-                          Icons.school_outlined,
-                          size: 16),
-                      label:
-                          Text(me.educationLevel)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: scheme.tertiaryContainer,
+                      borderRadius:
+                          BorderRadius.circular(12),
+                      border: Border.all(
+                        color: scheme.tertiary
+                            .withValues(alpha: 0.45),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.school_rounded,
+                          size: 16,
+                          color: scheme.onTertiaryContainer,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          me.educationLevel,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                            color:
+                                scheme.onTertiaryContainer,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 Chip(
                     avatar: const Icon(
                         Icons.calendar_month_outlined,
@@ -245,8 +293,8 @@ class ProfileTab extends StatelessWidget {
                           posts: saved,
                           emptyTitle: S.noSavedYet,
                           emptyHint: S.noSavedHint,
-                          emptyIcon: Icons
-                              .bookmark_outline_rounded),
+                          illustration:
+                              ill.IllustrationKind.compass),
                       _FollowingList(users: following),
                       const _CoursesPlaceholder(),
                     ],
@@ -317,21 +365,21 @@ class _PostsList extends StatelessWidget {
     required this.posts,
     this.emptyTitle = S.noPostsYet,
     this.emptyHint,
-    this.emptyIcon = Icons.forum_outlined,
+    this.illustration = ill.IllustrationKind.chat,
   });
 
   final List<Post> posts;
   final String emptyTitle;
   final String? emptyHint;
-  final IconData emptyIcon;
+  final ill.IllustrationKind illustration;
 
   @override
   Widget build(BuildContext context) {
     if (posts.isEmpty) {
-      return EmptyState(
-          icon: emptyIcon,
+      return ill.EmptyState(
+          illustration: illustration,
           title: emptyTitle,
-          subtitle: emptyHint);
+          body: emptyHint);
     }
     return ListView.builder(
       padding: const EdgeInsets.only(bottom: 16),
@@ -351,8 +399,8 @@ class _FollowingList extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = context.read<AppStore>();
     if (users.isEmpty) {
-      return const EmptyState(
-        icon: Icons.people_outline_rounded,
+      return const ill.EmptyState(
+        illustration: ill.IllustrationKind.chat,
         title: S.noFollowingYet,
       );
     }
@@ -394,10 +442,10 @@ class _CoursesPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return EmptyState(
-      icon: Icons.play_circle_outline_rounded,
+    return const ill.EmptyState(
+      illustration: ill.IllustrationKind.trophy,
       title: S.tabCourses,
-      subtitle: S.coursesPhase3Note,
+      body: S.coursesPhase3Note,
     );
   }
 }

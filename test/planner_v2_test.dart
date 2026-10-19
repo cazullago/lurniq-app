@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lurniq/core/ai_service.dart';
+import 'package:lurniq/core/strings.dart';
+import 'package:lurniq/models/models.dart';
+import 'package:lurniq/screens/planner/ai_sheet.dart';
 import 'package:lurniq/screens/planner/task_form_screen.dart';
 import 'package:lurniq/store/app_store.dart';
 import 'package:provider/provider.dart';
@@ -14,7 +17,7 @@ import 'package:provider/provider.dart';
 Future<AppStore> signedInStore() async {
   final store = await AppStore.loadForTest();
   await store.signUp(
-      displayName: 'Planner Tester', username: 'planner_tester');
+      displayName: 'Planner Tester', username: 'planner_tester', tosAccepted: true, ppAccepted: true);
   return store;
 }
 
@@ -142,6 +145,9 @@ void main() {
       expect(find.text('Save task'), findsOneWidget);
       expect(tester.takeException(), isNull,
           reason: 'no layout overflow on a 360-wide viewport');
+      // Flush the store's debounced autosave timer before teardown —
+      // a static form schedules no frames, so pumpAndSettle never fires it.
+      await tester.pump(const Duration(seconds: 2));
     });
 
     testWidgets('edit form renders at 360x640 without overflow',
@@ -168,9 +174,150 @@ void main() {
 
       expect(find.text('Existing task with a long title'),
           findsOneWidget);
-      expect(find.text('Lab report'), findsOneWidget);
+      // "Lab report" shows both in the type field and the Other free-text
+      // field — assert the editable one.
+      expect(find.widgetWithText(TextField, 'Lab report'),
+          findsOneWidget);
       expect(tester.takeException(), isNull,
           reason: 'no layout overflow on a 360-wide viewport');
+      await tester.pump(const Duration(seconds: 2));
+    });
+  });
+
+  group('AI quota', () {
+    test('consumeDemoAiQuota decrements the daily quota', () async {
+      final store = await signedInStore();
+      expect(store.aiUnlimited, isFalse);
+      expect(store.demoAiQuotaRemaining(),
+          SubscriptionApi.freeDailyAiQuota);
+      expect(await store.consumeDemoAiQuota(), isTrue);
+      expect(store.demoAiQuotaRemaining(),
+          SubscriptionApi.freeDailyAiQuota - 1);
+    });
+
+    test('quota resets on a new day', () async {
+      final store = await signedInStore();
+      // Simulate yesterday's exhausted quota by writing the fields
+      // directly, the way the store persists them.
+      store.aiDemoQuotaDate = '2000-01-01';
+      store.aiDemoQuotaUsed = SubscriptionApi.freeDailyAiQuota;
+      expect(store.demoAiQuotaRemaining(),
+          SubscriptionApi.freeDailyAiQuota,
+          reason: 'a stale date means a fresh quota');
+      expect(await store.consumeDemoAiQuota(), isTrue);
+      expect(store.aiDemoQuotaUsed, 1,
+          reason: 'first question of the new day');
+    });
+
+    test('consumeDemoAiQuota returns false at 0', () async {
+      final store = await signedInStore();
+      for (var i = 0;
+          i < SubscriptionApi.freeDailyAiQuota;
+          i++) {
+        expect(await store.consumeDemoAiQuota(), isTrue);
+      }
+      expect(store.demoAiQuotaRemaining(), 0);
+      expect(await store.consumeDemoAiQuota(), isFalse,
+          reason: 'an exhausted quota blocks further questions');
+      expect(store.demoAiQuotaRemaining(), 0,
+          reason: 'a refused consume does not go negative');
+    });
+
+    test('aiUnlimited is true with an API key or Plus', () async {
+      final store = await signedInStore();
+      expect(store.aiUnlimited, isFalse);
+
+      await store.setAiApiKey('test-key');
+      expect(store.aiUnlimited, isTrue,
+          reason: 'own API key means their own quota');
+      expect(store.demoAiQuotaRemaining(), -1,
+          reason: '-1 means unlimited');
+      expect(await store.consumeDemoAiQuota(), isTrue);
+
+      await store.setAiApiKey(null);
+      expect(store.aiUnlimited, isFalse);
+
+      await store.setEntitlement(
+          Entitlement(plan: 'plus', source: 'demo'));
+      expect(store.isPlus, isTrue);
+      expect(store.aiUnlimited, isTrue);
+      expect(store.demoAiQuotaRemaining(), -1);
+    });
+
+    Future<void> openSheet(
+        WidgetTester tester, AppStore store) async {
+      await tester.pumpWidget(
+        ChangeNotifierProvider<AppStore>.value(
+          value: store,
+          child: MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (ctx) => FilledButton(
+                  onPressed: () => AiSheet.show(
+                    ctx,
+                    title: S.askAi,
+                    contextText: 'Task: Fractions homework',
+                  ),
+                  child: const Text('open sheet'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open sheet'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('remaining count shows after a question',
+        (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final store = await signedInStore();
+      await openSheet(tester, store);
+
+      await tester.enterText(
+          find.byType(TextField), 'How do I study fractions?');
+      await tester.tap(find.widgetWithText(FilledButton, S.askAi));
+      await tester.pumpAndSettle();
+
+      expect(
+          find.text(
+              '${SubscriptionApi.freeDailyAiQuota - 1} ${S.dailyAiQuotaNote}'),
+          findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pump(const Duration(seconds: 2));
+    });
+
+    testWidgets('upsell panel appears when quota is exhausted',
+        (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final store = await signedInStore();
+      for (var i = 0;
+          i < SubscriptionApi.freeDailyAiQuota;
+          i++) {
+        await store.consumeDemoAiQuota();
+      }
+      expect(store.demoAiQuotaRemaining(), 0);
+
+      await openSheet(tester, store);
+
+      await tester.enterText(
+          find.byType(TextField), 'One question too many');
+      await tester.tap(find.widgetWithText(FilledButton, S.askAi));
+      await tester.pumpAndSettle();
+
+      expect(find.text(S.quotaExhaustedTitle), findsOneWidget);
+      expect(find.text(S.quotaExhaustedBody), findsOneWidget);
+      expect(find.text('Add API key'), findsOneWidget);
+      expect(find.text(S.viewPlus), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pump(const Duration(seconds: 2));
     });
   });
 }

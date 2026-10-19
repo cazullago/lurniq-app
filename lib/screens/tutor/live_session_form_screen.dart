@@ -7,6 +7,7 @@ import '../../core/utils.dart';
 import '../../models/models.dart';
 import '../../store/app_store.dart';
 import '../../widgets/ui.dart';
+import '../legal/legal_screens.dart';
 import 'quiz_builder.dart';
 
 /// Tutor form to schedule a public live session: title, subject,
@@ -79,6 +80,10 @@ class _LiveSessionFormScreenState extends State<LiveSessionFormScreen> {
       return;
     }
     setState(() => _saving = true);
+    if (!await ensureTutorAgreement(context)) {
+      setState(() => _saving = false);
+      return;
+    }
     final local = DateTime(
         _date!.year, _date!.month, _date!.day, _time!.hour, _time!.minute);
     await store.createLiveSession(LiveSession(

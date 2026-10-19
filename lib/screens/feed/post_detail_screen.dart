@@ -9,6 +9,7 @@ import '../../core/strings.dart';
 import '../../core/utils.dart';
 import '../../models/models.dart';
 import '../../store/app_store.dart';
+import '../../widgets/illustrations.dart' as ill;
 import '../../widgets/tappable_name.dart';
 import '../../widgets/ui.dart';
 
@@ -41,8 +42,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     if (post == null) {
       return Scaffold(
         appBar: AppBar(),
-        body: const EmptyState(
-          icon: Icons.forum_outlined,
+        body: const ill.EmptyState(
+          illustration: ill.IllustrationKind.compass,
           title: S.feedEmpty,
         ),
       );
@@ -51,7 +52,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final isAuthor = me != null && post.authorId == me.id;
     final comments =
         store.commentsFor(post.id).where((c) => c.parentId == null).toList();
-    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -74,14 +74,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       '${S.comments} (${store.commentsFor(post.id).length})',
                 ),
                 if (comments.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 8),
-                    child: Text(
-                      S.addCommentHint,
-                      style: TextStyle(
-                          color: scheme.onSurfaceVariant),
-                    ),
+                  ill.EmptyState(
+                    illustration:
+                        ill.IllustrationKind.chat,
+                    title: S.comments,
+                    body: S.addCommentHint,
                   ),
                 ...comments.map((c) => _CommentTile(
                       comment: c,

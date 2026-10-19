@@ -3,11 +3,51 @@ import 'package:flutter/material.dart';
 /// Lurniq visual identity: warm, welcoming, modern. Material 3, original
 /// palette — terracotta primary, deep-teal secondary, amber tertiary —
 /// on warm paper (light) / warm charcoal (dark) backgrounds.
+///
+/// v2 design language: the palette is *owned* in both modes via signature
+/// gradients (sunrise for day, ember-dusk for night), cards carry soft
+/// depth, headers are expressive, and empty states use original vector
+/// illustrations (see widgets/illustrations.dart) — never heavy bitmaps.
 class AppTheme {
   static const _seed = Color(0xFFE8762D);
   static const primary = Color(0xFFC2571D);
   static const secondary = Color(0xFF0F766E);
   static const tertiary = Color(0xFFB45309);
+
+  /// Signature gradient: sunrise (day) / ember dusk (night). Used for
+  /// hero headers, primary CTAs accents, and brand moments.
+  static LinearGradient heroGradient(Brightness brightness) =>
+      brightness == Brightness.light
+          ? const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFE8762D), Color(0xFFF5B04C)],
+            )
+          : const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFF0925C), Color(0xFF7C2D12)],
+            );
+
+  /// Soft wash behind section headers and empty states.
+  static LinearGradient washGradient(Brightness brightness) =>
+      brightness == Brightness.light
+          ? LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFFE8762D).withValues(alpha: 0.14),
+                const Color(0xFFE8762D).withValues(alpha: 0.0),
+              ],
+            )
+          : LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFFF0925C).withValues(alpha: 0.16),
+                const Color(0xFFF0925C).withValues(alpha: 0.0),
+              ],
+            );
 
   static ThemeData light() {
     final scheme = ColorScheme.fromSeed(
@@ -31,26 +71,37 @@ class AppTheme {
       brightness: Brightness.dark,
     ).copyWith(
       primary: const Color(0xFFF0925C),
+      onPrimary: const Color(0xFF2A1408),
       secondary: const Color(0xFF5EC8BE),
       tertiary: const Color(0xFFF5B04C),
       surface: const Color(0xFF1C1512),
+      onSurface: const Color(0xFFFFF3E8),
+      onSurfaceVariant: const Color(0xFFE8D5C0),
       surfaceContainerLow: const Color(0xFF241C17),
       surfaceContainerHighest: const Color(0xFF332922),
+      outlineVariant: const Color(0xFF5A4636),
     );
-    return _base(scheme);
+    return _base(scheme, dark: true);
   }
 
-  static ThemeData _base(ColorScheme scheme) {
+  static ThemeData _base(ColorScheme scheme, {bool dark = false}) {
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: scheme.surface,
       cardTheme: CardThemeData(
-        elevation: 0,
+        elevation: dark ? 0 : 2,
+        shadowColor: dark
+            ? Colors.transparent
+            : const Color(0xFF7C2D12).withValues(alpha: 0.10),
         color: scheme.surfaceContainerLow,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: dark
+                ? scheme.outlineVariant.withValues(alpha: 0.7)
+                : scheme.outlineVariant.withValues(alpha: 0.4),
+          ),
         ),
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       ),
@@ -61,8 +112,9 @@ class AppTheme {
         scrolledUnderElevation: 1,
         centerTitle: false,
         titleTextStyle: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
+          fontSize: 22,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.3,
           color: scheme.onSurface,
         ),
       ),
@@ -150,6 +202,34 @@ class AppTheme {
           borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
       ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: _SoftFadeTransitionBuilder(),
+          TargetPlatform.iOS: _SoftFadeTransitionBuilder(),
+        },
+      ),
+    );
+  }
+}
+
+/// Subtle shared-element-feel transition: quick fade + gentle scale.
+/// Keeps navigation feeling alive without slowing the user down.
+class _SoftFadeTransitionBuilder extends PageTransitionsBuilder {
+  const _SoftFadeTransitionBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final fade = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+    final scale = Tween<double>(begin: 0.98, end: 1.0).animate(fade);
+    return FadeTransition(
+      opacity: fade,
+      child: ScaleTransition(scale: scale, child: child),
     );
   }
 }

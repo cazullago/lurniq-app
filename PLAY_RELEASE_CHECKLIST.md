@@ -7,7 +7,7 @@ owner's account, identity, or action).
 ## App identity & versioning
 
 - [x] `applicationId` reserved: **`com.lurniq.app`** (`android/app/build.gradle.kts`)
-- [x] Version discipline: `pubspec.yaml` `version: 1.0.0+1` → versionName `1.0.0`, versionCode `1`. Bump versionCode on **every** release; never reuse one.
+- [x] Version discipline: `pubspec.yaml` `version: 2.0.0+2` → versionName `2.0.0`, versionCode `2`. Bump versionCode on **every** release; never reuse one.
 - [x] App name "Lurniq" + original launcher icon (adaptive + legacy PNGs, 100% original artwork, no brand marks)
 
 ## Signing
@@ -26,8 +26,12 @@ owner's account, identity, or action).
 
 - [ ] **User-side:** Google Play developer account — **$25 one-time** (organization accounts need D-U-N-S verification)
 - [ ] **User-side:** create the app in Play Console (package `com.lurniq.app`), complete the **content rating questionnaire** (IARC)
-- [ ] **User-side:** fill in the **Data safety form**:
-  - Camera / photos: collected **only** when the user captures or attaches an image (lesson photos, post images, profile photo); stored on-device in Phase 1, never sold
+- [ ] **User-side:** fill in the **Data safety form** (v2):
+  - Camera / photos: collected **only** when the user captures or attaches an image (lesson photos, post images, profile photo, chat images, grade photos); stored on-device, never sold
+  - Notifications: **on-device only** (session reminders, enrollment/booking alerts) — no data leaves the device
+  - AI study helper: if the user enters their own API key, prompts are sent to their AI provider (Google AI Studio/Gemini via the OpenAI-compatible endpoint); demo AI runs fully on-device with template responses
+  - Messaging: demo-mode threads stored **on-device only**; block/report stored on-device
+  - Lurniq Plus: subscription screen is "Coming soon" — **no billing, no payment data collected** in v2
   - No precise location collected (study groups use user-typed public places only)
   - No contacts, no call logs
   - Account deletion: in-app (Settings → Delete account) wipes on-device data
@@ -42,16 +46,19 @@ owner's account, identity, or action).
 
 ## Legal
 
-- [x] Privacy-policy **template** tracked in-repo: `docs/privacy-policy-template.md`
-- [ ] **User-side:** legal review of the template, then host it at a public URL and paste the URL into Play Console
-- [ ] **User-side:** Terms of Service (in-app placeholders point here until published)
+- [x] In-app **Terms of Service**, **Privacy Policy**, and **Tutor Agreement** are real **drafts** (`lib/screens/legal/legal_screens.dart`) — every surface banners "Draft for review — not legal advice. Must be reviewed by a lawyer before accepting real payments."
+- [x] Sign-up requires ToS + Privacy Policy acceptance (version + timestamp stored); tutor listing requires Tutor Agreement acceptance (version-gated)
+- [x] `LEGAL_CHECKLIST.md`: BIR registration, Data Privacy Act/NPC, Play Data Safety mapping, lawyer-review gate before payments, Stripe Connect, tutor age verification
+- [ ] **User-side:** lawyer review of all three documents (REQUIRED before enabling payments or publishing)
+- [ ] **User-side:** host the reviewed Privacy Policy at a public URL and paste the URL into Play Console
 
 ## Pre-upload verification (in-repo, run every release)
 
 - [x] `flutter analyze --no-fatal-infos` clean (CI-enforced)
 - [x] `flutter test` green (CI-enforced)
 - [x] Manifest/dex sanity: `aapt dump xmltree` shows `.MainActivity`; `classes.dex` contains `Lcom/lurniq/app/MainActivity;` (verified on v1.0.0)
-- [x] Permissions declared: camera + photos only, requested at point of need with rationale
+- [x] Permissions declared (v2): camera + photos (point-of-need with rationale), **notifications** (`POST_NOTIFICATIONS`, for session reminders/enrollment alerts), **exact alarms** (`SCHEDULE_EXACT_ALARM`/`USE_EXACT_ALARM`, for 15-min session reminders)
+- [x] Lurniq Plus subscription screen ships as **"Coming soon"** — no Play Billing wired, no money moves (entitlement model ready: `Entitlement` + `AppStore.setEntitlement()`)
 - [ ] **User-side:** install the release AAB/APK on a real device and confirm: cold start, sign-up, post creation, lesson capture, task CRUD, admin passcode gate
 
 ## Explicitly NOT done (do not claim)
@@ -59,3 +66,4 @@ owner's account, identity, or action).
 - No keystore is generated or committed by this repo — the keystore step above is entirely user-side.
 - The CI release AAB without the four secrets is **debug-signed**: a performance/size reference, **not** for Play upload.
 - Phase 1 has no real backend, payments, or push — the Data safety form must describe the *current* build honestly at each release.
+- v2 adds: local notifications (on-device), user-provided AI key (sent to the user's AI provider only), demo-mode messaging (on-device), draft legal documents (lawyer review required before payments).

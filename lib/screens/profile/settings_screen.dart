@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 
 import '../../core/constants.dart';
 import '../../core/strings.dart';
+import '../../core/theme.dart';
 import '../../core/utils.dart';
 import '../../store/app_store.dart';
+import 'subscription_screen.dart';
 import '../../widgets/ui.dart';
 
 /// App settings: language, currency, timezone, notifications, blocked users,
@@ -23,241 +25,268 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 32),
         children: [
-          SectionHeader(title: S.account),
-          _Tile(
-            icon: Icons.language_outlined,
-            title: S.language,
-            subtitle: 'English',
-            onTap: () => _languageDialog(context),
+          _WashSection(
+            title: S.account,
+            children: [
+              _Tile(
+                icon: Icons.language_outlined,
+                title: S.language,
+                subtitle: 'English',
+                onTap: () => _languageDialog(context),
+              ),
+              _Tile(
+                icon: Icons.attach_money_rounded,
+                title: S.currencyDisplay,
+                subtitle:
+                    '${me.currency} — ${S.currencyNote}',
+                onTap: () =>
+                    _currencyDialog(context, store),
+              ),
+              _Tile(
+                icon: Icons.schedule_outlined,
+                title: S.timezone,
+                subtitle: me.timezoneMode == 'device'
+                    ? '${S.timezoneDevice} (${offsetLabel(viewerOffsetMinutes(me))})'
+                    : me.timezoneLabel,
+                onTap: () =>
+                    _timezoneDialog(context, store),
+              ),
+              _Tile(
+                icon: Icons.workspace_premium_outlined,
+                title: S.subscription,
+                subtitle:
+                    store.isPlus ? S.plusTitle : S.freeTier,
+                badge: store.isPlus ? 'PLUS' : null,
+                onTap: () =>
+                    Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          const SubscriptionScreen()),
+                ),
+              ),
+            ],
           ),
-          _Tile(
-            icon: Icons.attach_money_rounded,
-            title: S.currencyDisplay,
-            subtitle: '${me.currency} — ${S.currencyNote}',
-            onTap: () => _currencyDialog(context, store),
-          ),
-          _Tile(
-            icon: Icons.schedule_outlined,
-            title: S.timezone,
-            subtitle: me.timezoneMode == 'device'
-                ? '${S.timezoneDevice} (${offsetLabel(viewerOffsetMinutes(me))})'
-                : me.timezoneLabel,
-            onTap: () => _timezoneDialog(context, store),
-          ),
-          SectionHeader(title: S.appearance),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+          _WashSection(
+            title: S.appearance,
+            children: [
+              Padding(
+                padding:
+                    const EdgeInsets.fromLTRB(16, 2, 16, 0),
+                child: Text(
                   S.themeMode,
                   style: Theme.of(context)
                       .textTheme
                       .labelLarge
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                      ?.copyWith(
+                          fontWeight: FontWeight.w700),
                 ),
-                const SizedBox(height: 8),
-                SegmentedButton<ThemeModeSetting>(
-                  multiSelectionEnabled: false,
-                  showSelectedIcon: false,
-                  segments: const [
-                    ButtonSegment(
-                      value: ThemeModeSetting.system,
-                      label: Text(S.themeSystem),
+              ),
+              const Padding(
+                padding:
+                    EdgeInsets.fromLTRB(8, 10, 8, 2),
+                child: _ThemeModeSelector(),
+              ),
+            ],
+          ),
+          const _WashSection(
+            title: 'AI',
+            children: [
+              _AiKeySection(),
+            ],
+          ),
+          _WashSection(
+            title: S.notifications,
+            children: [
+              _SwitchTile(
+                icon: Icons.notifications_outlined,
+                title: S.notifPush,
+                value: me.notifPush,
+                onChanged: (v) {
+                  me.notifPush = v;
+                  store.updateProfile(me);
+                },
+              ),
+              _SwitchTile(
+                icon: Icons.favorite_outline_rounded,
+                title: S.notifLikes,
+                value: me.notifLikes,
+                onChanged: (v) {
+                  me.notifLikes = v;
+                  store.updateProfile(me);
+                },
+              ),
+              _SwitchTile(
+                icon: Icons.chat_bubble_outline_rounded,
+                title: S.notifComments,
+                value: me.notifComments,
+                onChanged: (v) {
+                  me.notifComments = v;
+                  store.updateProfile(me);
+                },
+              ),
+              _SwitchTile(
+                icon: Icons.alarm_outlined,
+                title: S.notifReminders,
+                value: me.notifReminders,
+                onChanged: (v) {
+                  me.notifReminders = v;
+                  store.updateProfile(me);
+                },
+              ),
+              _SwitchTile(
+                icon: Icons.group_outlined,
+                title: S.notifGroups,
+                value: me.notifGroups,
+                onChanged: (v) {
+                  me.notifGroups = v;
+                  store.updateProfile(me);
+                },
+              ),
+              Padding(
+                padding:
+                    const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                child: Text(
+                  S.notifPhase2Note,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(
+                          color: scheme.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+          _WashSection(
+            title: S.blockedUsers,
+            children: [
+              if (me.blockedIds.isEmpty)
+                const Padding(
+                  padding:
+                      EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Text(S.noBlockedUsers),
+                ),
+              ...me.blockedIds.map((id) {
+                final u = store.userById(id);
+                return ListTile(
+                  leading: UserAvatar(
+                      name: u?.displayName ?? '?',
+                      radius: 18),
+                  title: Text(u?.displayName ?? id),
+                  trailing: TextButton(
+                    onPressed: () => store.unblock(id),
+                    child: const Text(S.unblock),
+                  ),
+                );
+              }),
+            ],
+          ),
+          _WashSection(
+            title: S.helpSupport,
+            children: [
+              _Tile(
+                icon: Icons.help_outline_rounded,
+                title: S.helpSupport,
+                onTap: () => _infoDialog(
+                    context, S.helpSupport, S.helpBody),
+              ),
+              _Tile(
+                icon: Icons.description_outlined,
+                title: S.termsOfService,
+                onTap: () => _infoDialog(context,
+                    S.termsOfService, S.legalPlaceholder),
+              ),
+              _Tile(
+                icon: Icons.privacy_tip_outlined,
+                title: S.privacyPolicy,
+                onTap: () => _infoDialog(context,
+                    S.privacyPolicy, S.legalPlaceholder),
+              ),
+              _Tile(
+                icon: Icons.refresh_rounded,
+                title: S.resetDemoContent,
+                onTap: () async {
+                  final ok = await confirmDialog(
+                    context,
+                    title: S.resetDemoContent,
+                    body: S.resetDemoContentConfirm,
+                    confirmLabel: S.confirm,
+                    destructive: false,
+                  );
+                  if (ok) {
+                    await store.clearDemoContent();
+                    if (context.mounted) {
+                      showSnack(
+                          context, S.demoContentCleared);
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
+          _WashSection(
+            title: S.dangerZone,
+            children: [
+              Padding(
+                padding:
+                    const EdgeInsets.fromLTRB(12, 0, 12, 0),
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.stretch,
+                  children: [
+                    OutlinedButton.icon(
                       icon:
-                          Icon(Icons.settings_suggest_outlined),
+                          const Icon(Icons.logout_rounded),
+                      label: const Text(S.signOut),
+                      onPressed: () async {
+                        final ok = await confirmDialog(
+                          context,
+                          title: S.signOut,
+                          body: S.signOutConfirm,
+                          confirmLabel: S.signOut,
+                          destructive: false,
+                        );
+                        if (ok) {
+                          await store.signOut();
+                          if (context.mounted) {
+                            Navigator.of(context).popUntil(
+                                (r) => r.isFirst);
+                          }
+                        }
+                      },
                     ),
-                    ButtonSegment(
-                      value: ThemeModeSetting.light,
-                      label: Text(S.themeLight),
-                      icon: Icon(Icons.light_mode_outlined),
-                    ),
-                    ButtonSegment(
-                      value: ThemeModeSetting.dark,
-                      label: Text(S.themeDark),
-                      icon: Icon(Icons.dark_mode_outlined),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      icon: Icon(
+                          Icons.delete_forever_outlined,
+                          color: scheme.error),
+                      label: Text(S.deleteAccount,
+                          style: TextStyle(
+                              color: scheme.error)),
+                      style:
+                          OutlinedButton.styleFrom(
+                        side: BorderSide(
+                            color: scheme.error.withValues(
+                                alpha: 0.5)),
+                      ),
+                      onPressed: () async {
+                        final ok = await confirmDialog(
+                          context,
+                          title: S.deleteAccountTitle,
+                          body: S.deleteAccountBody,
+                        );
+                        if (ok) {
+                          await store.deleteAccount();
+                          if (context.mounted) {
+                            Navigator.of(context).popUntil(
+                                (r) => r.isFirst);
+                          }
+                        }
+                      },
                     ),
                   ],
-                  selected: {store.themeModeSetting},
-                  onSelectionChanged: (s) =>
-                      store.setThemeMode(s.first),
                 ),
-              ],
-            ),
-          ),
-          const SectionHeader(title: 'AI'),
-          const _AiKeySection(),
-          SectionHeader(title: S.notifications),
-          _SwitchTile(
-            icon: Icons.notifications_outlined,
-            title: S.notifPush,
-            value: me.notifPush,
-            onChanged: (v) {
-              me.notifPush = v;
-              store.updateProfile(me);
-            },
-          ),
-          _SwitchTile(
-            icon: Icons.favorite_outline_rounded,
-            title: S.notifLikes,
-            value: me.notifLikes,
-            onChanged: (v) {
-              me.notifLikes = v;
-              store.updateProfile(me);
-            },
-          ),
-          _SwitchTile(
-            icon: Icons.chat_bubble_outline_rounded,
-            title: S.notifComments,
-            value: me.notifComments,
-            onChanged: (v) {
-              me.notifComments = v;
-              store.updateProfile(me);
-            },
-          ),
-          _SwitchTile(
-            icon: Icons.alarm_outlined,
-            title: S.notifReminders,
-            value: me.notifReminders,
-            onChanged: (v) {
-              me.notifReminders = v;
-              store.updateProfile(me);
-            },
-          ),
-          _SwitchTile(
-            icon: Icons.group_outlined,
-            title: S.notifGroups,
-            value: me.notifGroups,
-            onChanged: (v) {
-              me.notifGroups = v;
-              store.updateProfile(me);
-            },
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-            child: Text(
-              S.notifPhase2Note,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ),
-          SectionHeader(title: S.blockedUsers),
-          if (me.blockedIds.isEmpty)
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Text(S.noBlockedUsers),
-            ),
-          ...me.blockedIds.map((id) {
-            final u = store.userById(id);
-            return ListTile(
-              leading: UserAvatar(
-                  name: u?.displayName ?? '?', radius: 18),
-              title: Text(u?.displayName ?? id),
-              trailing: TextButton(
-                onPressed: () => store.unblock(id),
-                child: const Text(S.unblock),
               ),
-            );
-          }),
-          SectionHeader(title: S.helpSupport),
-          _Tile(
-            icon: Icons.help_outline_rounded,
-            title: S.helpSupport,
-            onTap: () => _infoDialog(
-                context, S.helpSupport, S.helpBody),
-          ),
-          _Tile(
-            icon: Icons.description_outlined,
-            title: S.termsOfService,
-            onTap: () => _infoDialog(
-                context, S.termsOfService, S.legalPlaceholder),
-          ),
-          _Tile(
-            icon: Icons.privacy_tip_outlined,
-            title: S.privacyPolicy,
-            onTap: () => _infoDialog(
-                context, S.privacyPolicy, S.legalPlaceholder),
-          ),
-          _Tile(
-            icon: Icons.refresh_rounded,
-            title: S.resetDemoContent,
-            onTap: () async {
-              final ok = await confirmDialog(
-                context,
-                title: S.resetDemoContent,
-                body: S.resetDemoContentConfirm,
-                confirmLabel: S.confirm,
-                destructive: false,
-              );
-              if (ok) {
-                await store.clearDemoContent();
-                if (context.mounted) {
-                  showSnack(
-                      context, S.demoContentCleared);
-                }
-              }
-            },
-          ),
-          SectionHeader(
-            title: S.dangerZone,
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.logout_rounded),
-                  label: const Text(S.signOut),
-                  onPressed: () async {
-                    final ok = await confirmDialog(
-                      context,
-                      title: S.signOut,
-                      body: S.signOutConfirm,
-                      confirmLabel: S.signOut,
-                      destructive: false,
-                    );
-                    if (ok) {
-                      await store.signOut();
-                      if (context.mounted) {
-                        Navigator.of(context)
-                            .popUntil((r) => r.isFirst);
-                      }
-                    }
-                  },
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  icon: Icon(Icons.delete_forever_outlined,
-                      color: scheme.error),
-                  label: Text(S.deleteAccount,
-                      style:
-                          TextStyle(color: scheme.error)),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(
-                        color: scheme.error
-                            .withValues(alpha: 0.5)),
-                  ),
-                  onPressed: () async {
-                    final ok = await confirmDialog(
-                      context,
-                      title: S.deleteAccountTitle,
-                      body: S.deleteAccountBody,
-                    );
-                    if (ok) {
-                      await store.deleteAccount();
-                      if (context.mounted) {
-                        Navigator.of(context)
-                            .popUntil((r) => r.isFirst);
-                      }
-                    }
-                  },
-                ),
-              ],
-            ),
+            ],
           ),
         ],
       ),
@@ -415,6 +444,197 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
+/// A settings section grouped on a warm gradient wash: the section's rows
+/// sit together as warm cards instead of a flat generic form.
+class _WashSection extends StatelessWidget {
+  const _WashSection({
+    required this.title,
+    required this.children,
+  });
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 14, 12, 0),
+      decoration: BoxDecoration(
+        gradient: AppTheme.washGradient(brightness),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 2),
+            child: Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    gradient:
+                        AppTheme.heroGradient(brightness),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  title,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: scheme.onSurface,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          ...children,
+          const SizedBox(height: 10),
+        ],
+      ),
+    );
+  }
+}
+
+/// Visual Day / Night / System selector: three preview chips that show the
+/// actual look (gradient for system, light paper, dark charcoal).
+class _ThemeModeSelector extends StatelessWidget {
+  const _ThemeModeSelector();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final current = store.themeModeSetting;
+    return Row(
+      children: [
+        for (final mode in ThemeModeSetting.values)
+          Expanded(
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 4),
+              child: _ThemeChip(
+                mode: mode,
+                selected: mode == current,
+                onTap: () => store.setThemeMode(mode),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ThemeChip extends StatelessWidget {
+  const _ThemeChip({
+    required this.mode,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final ThemeModeSetting mode;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
+    final label = switch (mode) {
+      ThemeModeSetting.system => S.themeSystem,
+      ThemeModeSetting.light => S.themeLight,
+      ThemeModeSetting.dark => S.themeDark,
+    };
+    final icon = switch (mode) {
+      ThemeModeSetting.system => Icons.brightness_auto_rounded,
+      ThemeModeSetting.light => Icons.light_mode_rounded,
+      ThemeModeSetting.dark => Icons.dark_mode_rounded,
+    };
+    // The preview swatch shows the real thing: the signature gradient for
+    // "system", the actual light paper, the actual dark charcoal.
+    final swatchGradient = mode == ThemeModeSetting.system
+        ? AppTheme.heroGradient(brightness)
+        : null;
+    final swatchColor = mode == ThemeModeSetting.light
+        ? const Color(0xFFFFFBF4)
+        : mode == ThemeModeSetting.dark
+            ? const Color(0xFF1C1512)
+            : null;
+    final iconColor = mode == ThemeModeSetting.system
+        ? Colors.white
+        : mode == ThemeModeSetting.light
+            ? const Color(0xFFB45309)
+            : const Color(0xFFF5B04C);
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Column(
+        children: [
+          Stack(
+            children: [
+              Container(
+                height: 64,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: swatchGradient,
+                  color: swatchColor,
+                  border: Border.all(
+                    color: selected
+                        ? scheme.primary
+                        : scheme.outlineVariant
+                            .withValues(alpha: 0.6),
+                    width: selected ? 2.5 : 1,
+                  ),
+                ),
+                child: Center(
+                  child:
+                      Icon(icon, color: iconColor, size: 28),
+                ),
+              ),
+              if (selected)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: scheme.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.check_rounded,
+                      size: 14,
+                      color: scheme.onPrimary,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight:
+                  selected ? FontWeight.w800 : FontWeight.w600,
+              color: selected
+                  ? scheme.primary
+                  : scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// AI helper API key: entered here, stored on-device via the store.
 /// A Google AI Studio (Gemini) API key works here.
 class _AiKeySection extends StatefulWidget {
@@ -522,16 +742,19 @@ class _Tile extends StatelessWidget {
     required this.icon,
     required this.title,
     this.subtitle,
+    this.badge,
     this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String? subtitle;
+  final String? badge;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Card(
       margin:
           const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -541,9 +764,31 @@ class _Tile extends StatelessWidget {
             style:
                 const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: subtitle == null ? null : Text(subtitle!),
-        trailing: onTap == null
-            ? null
-            : const Icon(Icons.chevron_right_rounded),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (badge != null)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: scheme.tertiaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  badge!,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                    color: scheme.onTertiaryContainer,
+                  ),
+                ),
+              ),
+            if (onTap != null)
+              const Icon(Icons.chevron_right_rounded),
+          ],
+        ),
         onTap: onTap,
       ),
     );

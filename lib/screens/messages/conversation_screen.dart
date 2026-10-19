@@ -209,11 +209,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 value: 'profile',
                 child: Text(S.viewProfile),
               ),
-              // `S.blockUser` is defined twice in strings.dart, so we use a
-              // local label here instead of referencing the ambiguous const.
               PopupMenuItem(
                 value: 'block',
-                child: Text(blocked ? S.unblockUser : 'Block'),
+                child: Text(blocked ? S.unblockUser : S.blockUser),
               ),
               const PopupMenuItem(
                 value: 'report',

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/strings.dart';
 import '../../core/utils.dart';
 import '../../store/app_store.dart';
+import '../legal/legal_screens.dart';
 
 /// "Become a tutor" — Phase 1 collects interest for the Phase 3 launch.
 /// The entry bar stays low by design; verification labels stay honest.
@@ -72,6 +73,27 @@ class _BecomeTutorScreenState extends State<BecomeTutorScreen> {
                   const Expanded(child: Text(S.becomeTutorBody)),
                 ],
               ),
+            ),
+            const SizedBox(height: 24),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.gavel_rounded),
+              label: const Text(S.reviewAgreement),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const TutorAgreementScreen(
+                      acceptMode: true,
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            Text(
+              S.agreementRequired,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
             ),
             const SizedBox(height: 24),
             Text(

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lurniq/core/strings.dart';
 import 'package:lurniq/models/models.dart';
-import 'package:lurniq/screens/tutor/booking_detail_screen.dart';
 import 'package:lurniq/screens/tutor/bookings_screen.dart';
 import 'package:lurniq/screens/tutor/course_detail_screen.dart';
 import 'package:lurniq/screens/tutor/quiz_runner.dart';
@@ -15,12 +14,14 @@ import 'package:provider/provider.dart';
 Future<AppStore> signedInStore() async {
   final store = await AppStore.loadForTest();
   await store.signUp(
-      displayName: 'Tutor Tester', username: 'tutor_tester');
+      displayName: 'Tutor Tester', username: 'tutor_tester', tosAccepted: true, ppAccepted: true);
+  // The store's debounced save timer must not outlive the test.
+  addTearDown(store.dispose);
   return store;
 }
 
 Widget withStore(AppStore store, Widget home) =>
-    Provider<AppStore>.value(
+    ChangeNotifierProvider<AppStore>.value(
       value: store,
       child: MaterialApp(home: home),
     );
@@ -56,6 +57,7 @@ void main() {
 
     expect(store.bookingById(booking.id)?.status, 'accepted');
     expect(find.text(S.bookingAccepted), findsOneWidget);
+    await store.flush(); // drain the debounced save timer (FakeAsync)
   });
 
   testWidgets('quiz runner: right answer scores, wrong one does not',
@@ -107,6 +109,7 @@ void main() {
     expect(attempts.length, 1);
     expect(attempts.first.score, 1);
     expect(attempts.first.total, 2);
+    await store.flush(); // drain the debounced save timer (FakeAsync)
   });
 
   testWidgets(
@@ -129,10 +132,11 @@ void main() {
     expect(find.text('0%'), findsOneWidget);
 
     await tester.tap(
-        find.widgetWithText(FilledButton.tonal, S.lessonDone).first);
+        find.widgetWithText(FilledButton, S.lessonDone).first);
     await tester.pumpAndSettle();
 
     expect(store.courseProgress('course-bio-cells'), 0.25);
     expect(find.text('25%'), findsOneWidget);
+    await store.flush(); // drain the debounced save timer (FakeAsync)
   });
 }

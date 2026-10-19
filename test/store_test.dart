@@ -18,7 +18,7 @@ Future<AppStore> freshStore() async {
 Future<AppStore> signedInStore() async {
   final store = await freshStore();
   await store.signUp(
-      displayName: 'Test User', username: 'testuser');
+      displayName: 'Test User', username: 'testuser', tosAccepted: true, ppAccepted: true);
   return store;
 }
 
@@ -28,7 +28,7 @@ void main() {
         () async {
       final store = await freshStore();
       await store.signUp(
-          displayName: 'Test User', username: 'testuser');
+          displayName: 'Test User', username: 'testuser', tosAccepted: true, ppAccepted: true);
       expect(store.currentUser?.username, 'testuser');
       expect(store.myFolders.length, 6,
           reason: 'default subject folders are seeded');
@@ -43,10 +43,10 @@ void main() {
     test('duplicate usernames are rejected', () async {
       final store = await freshStore();
       await store.signUp(
-          displayName: 'A', username: 'someone');
+          displayName: 'A', username: 'someone', tosAccepted: true, ppAccepted: true);
       expect(
         () => store.signUp(
-            displayName: 'B', username: 'Someone'),
+            displayName: 'B', username: 'Someone', tosAccepted: true, ppAccepted: true),
         throwsA(isA<StoreException>()),
       );
     });
@@ -147,7 +147,7 @@ void main() {
       ));
       await store.signOut();
       await store.signUp(
-          displayName: 'Other', username: 'other1');
+          displayName: 'Other', username: 'other1', tosAccepted: true, ppAccepted: true);
       final comment = await store.addComment(
           postId: post.id, body: 'answer');
       store.markHelpful(post.id, comment.id);
@@ -195,13 +195,13 @@ void main() {
 
       await store.signOut();
       await store.signUp(
-          displayName: 'Joiner', username: 'joiner1');
+          displayName: 'Joiner', username: 'joiner1', tosAccepted: true, ppAccepted: true);
       store.requestJoinGroup(post.id);
       expect(post.participantIds.length, 2);
 
       await store.signOut();
       await store.signUp(
-          displayName: 'Waitlister', username: 'waiter1');
+          displayName: 'Waitlister', username: 'waiter1', tosAccepted: true, ppAccepted: true);
       store.requestJoinGroup(post.id);
       expect(post.pendingIds.length, 1,
           reason: 'group is full -> waitlist');
@@ -401,7 +401,7 @@ void main() {
       expect(store.posts.every((p) => p.isDemo), isTrue);
       expect(store.comments.every((c) => c.isDemo), isTrue);
       await store.signUp(
-          displayName: 'U', username: 'u123');
+          displayName: 'U', username: 'u123', tosAccepted: true, ppAccepted: true);
       await store.clearDemoContent();
       expect(store.posts, isEmpty);
       expect(store.comments, isEmpty);

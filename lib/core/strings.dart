@@ -638,5 +638,24 @@ class S {
   static const perMonth = 'month';
   static const perYear = 'year';
   static const approxRateNote =
-      'USD equivalents are approximate (about ₱58 = $1).';
+      'USD equivalents are approximate (about ₱58 = \$1).';
+
+  // ── v2: Legal ──────────────────────────────────────────
+  static const legalDraftBanner = 'Draft for review — not legal advice. '
+      'Must be reviewed by a lawyer before accepting real payments.';
+  static const legalVersion = 'Version';
+  static const tosAccept = 'I accept the Terms of Service';
+  static const ppAccept = 'I accept the Privacy Policy';
+  static const mustAcceptLegal =
+      'Please accept the Terms of Service and Privacy Policy to continue.';
+  static const readDocument = 'Read';
+  static const tutorAgreementTitle = 'Tutor Agreement';
+  static const tutorAgreementAccept =
+      'I have read and accept the Tutor Agreement, including the 15% commission, payout terms, refund rules, and that I handle my own taxes.';
+  static const acceptAgreement = 'Accept agreement';
+  static const agreementAccepted = 'Tutor Agreement accepted.';
+  static const agreementRequired =
+      'Please review and accept the Tutor Agreement before listing.';
+  static const reviewAgreement = 'Review Tutor Agreement';
+  static const acceptedOn = 'Accepted on';
 }

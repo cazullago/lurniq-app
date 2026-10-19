@@ -45,6 +45,12 @@ class AppUser {
     DateTime? createdAt,
     this.demoSeed = false,
     this.themeMode = 'system',
+    this.tosVersion = '',
+    this.tosAcceptedAt,
+    this.ppVersion = '',
+    this.ppAcceptedAt,
+    this.tutorAgreementVersion = '',
+    this.tutorAgreementAt,
   })  : interests = interests ?? [],
         learningGoals = learningGoals ?? [],
         fieldPrivacy = fieldPrivacy ?? {},
@@ -80,6 +86,14 @@ class AppUser {
   bool demoSeed;
   /// 'system' | 'light' | 'dark' — manual day/night override.
   String themeMode;
+  // Legal acceptance (ToS + Privacy Policy at sign-up; Tutor Agreement
+  // before listing). Version + timestamp are stored with the account.
+  String tosVersion;
+  DateTime? tosAcceptedAt;
+  String ppVersion;
+  DateTime? ppAcceptedAt;
+  String tutorAgreementVersion;
+  DateTime? tutorAgreementAt;
 
   /// Privacy for a profile field; defaults to public.
   String privacyFor(String field) => fieldPrivacy[field] ?? 'public';
@@ -112,6 +126,12 @@ class AppUser {
         'createdAt': createdAt.toIso8601String(),
         'demoSeed': demoSeed,
         'themeMode': themeMode,
+        'tosVersion': tosVersion,
+        'tosAcceptedAt': tosAcceptedAt?.toIso8601String(),
+        'ppVersion': ppVersion,
+        'ppAcceptedAt': ppAcceptedAt?.toIso8601String(),
+        'tutorAgreementVersion': tutorAgreementVersion,
+        'tutorAgreementAt': tutorAgreementAt?.toIso8601String(),
       };
 
   factory AppUser.fromJson(Map<String, dynamic> j) => AppUser(
@@ -142,6 +162,19 @@ class AppUser {
         createdAt: _dt(j['createdAt'], DateTime.now()),
         demoSeed: (j['demoSeed'] ?? false) as bool,
         themeMode: (j['themeMode'] ?? 'system') as String,
+        tosVersion: (j['tosVersion'] ?? '') as String,
+        tosAcceptedAt: j['tosAcceptedAt'] is String
+            ? DateTime.tryParse(j['tosAcceptedAt'] as String)
+            : null,
+        ppVersion: (j['ppVersion'] ?? '') as String,
+        ppAcceptedAt: j['ppAcceptedAt'] is String
+            ? DateTime.tryParse(j['ppAcceptedAt'] as String)
+            : null,
+        tutorAgreementVersion:
+            (j['tutorAgreementVersion'] ?? '') as String,
+        tutorAgreementAt: j['tutorAgreementAt'] is String
+            ? DateTime.tryParse(j['tutorAgreementAt'] as String)
+            : null,
       );
 }
 
@@ -1231,6 +1264,7 @@ class ChatMessage {
     this.body = '',
     this.imagePath,
     DateTime? createdAt,
+    this.isDemo = false,
   }) : createdAt = createdAt ?? DateTime.now();
 
   String id;
@@ -1240,6 +1274,7 @@ class ChatMessage {
   String body;
   String? imagePath;
   DateTime createdAt;
+  bool isDemo;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -1249,6 +1284,7 @@ class ChatMessage {
         'body': body,
         'imagePath': imagePath,
         'createdAt': createdAt.toIso8601String(),
+        'isDemo': isDemo,
       };
 
   factory ChatMessage.fromJson(Map<String, dynamic> j) => ChatMessage(
@@ -1259,5 +1295,71 @@ class ChatMessage {
         body: (j['body'] ?? '') as String,
         imagePath: j['imagePath'] as String?,
         createdAt: _dt(j['createdAt'], DateTime.now()),
+        isDemo: (j['isDemo'] ?? false) as bool,
+      );
+}
+
+// ── v2: Lurniq Plus subscription ─────────────────────────
+//
+// Pricing catalog. PHP is the base currency; USD figures are approximate
+// equivalents for display (rate noted next to the price in the UI).
+class PlusCatalog {
+  static const String baseCurrency = 'PHP';
+  static const double usdPerPhp = 1 / 58; // approximate, display only
+
+  static const double monthlyPhp = 149;
+  static const double yearlyPhp = 999;
+
+  static String php(double v) => '₱${v.toStringAsFixed(0)}';
+
+  static String usdApprox(double phpPrice) =>
+      '≈ \$${(phpPrice * usdPerPhp).toStringAsFixed(2)}';
+
+  /// "₱149/month (≈ $2.57)" or "$2.57/month (≈ ₱149)" depending on preference.
+  static String priceLine(num phpPrice, String per, String currencyPref) {
+    final amount = phpPrice.toDouble();
+    final phpStr = '${php(amount)}/$per';
+    final usd = '\$${(amount * usdPerPhp).toStringAsFixed(2)}/$per';
+    if (currencyPref == 'USD') return '$usd (≈ $phpStr)';
+    return '$phpStr (${usdApprox(amount)}/$per)';
+  }
+}
+
+// ── v2: Lurniq Plus subscription entitlement ─────────────
+//
+// Honesty contract: real charging requires Google Play Billing, which is NOT
+// wired (needs the user's Play Console account — see README "Payments").
+// Subscribe buttons are marked "Coming soon" and move no money. When Play
+// Billing lands, it only needs to call AppStore.setEntitlement() with
+// source 'play_billing' — no refactoring of call sites.
+class Entitlement {
+  Entitlement({
+    this.plan = 'free', // free | plus
+    this.source = 'none', // none | demo | play_billing
+    this.plusExpiresAt,
+  });
+
+  String plan;
+  String source;
+  DateTime? plusExpiresAt;
+
+  bool get isPlus {
+    if (plan != 'plus') return false;
+    final exp = plusExpiresAt;
+    return exp == null || exp.isAfter(DateTime.now());
+  }
+
+  Map<String, dynamic> toJson() => {
+        'plan': plan,
+        'source': source,
+        'plusExpiresAt': plusExpiresAt?.toIso8601String(),
+      };
+
+  factory Entitlement.fromJson(Map<String, dynamic> j) => Entitlement(
+        plan: (j['plan'] ?? 'free') as String,
+        source: (j['source'] ?? 'none') as String,
+        plusExpiresAt: j['plusExpiresAt'] is String
+            ? DateTime.tryParse(j['plusExpiresAt'] as String)
+            : null,
       );
 }

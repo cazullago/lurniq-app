@@ -110,6 +110,16 @@ class _MainScreenState extends State<MainScreen> {
   DateTime? _lastProfileTap;
   int _profileTapCount = 0;
 
+  /// Tab pages created once so tab switches cross-fade without losing
+  /// scroll positions or form state.
+  late final List<Widget> _tabs = [
+    const TutorTab(),
+    FeedTab(onCompose: () => setState(() => _index = 2)),
+    const ComposeTab(),
+    const PlannerTab(),
+    const ProfileTab(),
+  ];
+
   void _onTap(int index) {
     if (index == 4) {
       final now = DateTime.now();
@@ -138,14 +148,24 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _index,
+      // One tab visible at a time; the rest stay alive but offstage so
+      // state (scroll, forms) is preserved and hidden tabs stay out of
+      // the semantics/finder tree. The active tab fades in subtly.
+      body: Stack(
         children: [
-          const TutorTab(),
-          FeedTab(onCompose: () => setState(() => _index = 2)),
-          const ComposeTab(),
-          const PlannerTab(),
-          const ProfileTab(),
+          for (var i = 0; i < _tabs.length; i++)
+            Offstage(
+              offstage: i != _index,
+              child: IgnorePointer(
+                ignoring: i != _index,
+                child: AnimatedOpacity(
+                  opacity: i == _index ? 1 : 0,
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  child: _tabs[i],
+                ),
+              ),
+            ),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
